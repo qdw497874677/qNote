@@ -829,7 +829,7 @@ select * from t1 straight_join t2 on (t1.a=t2.a);
 
 看一下explain的结果
 
-![img](/home/xiaomi/myNotes/MySQL实战.assets/4b9cb0e0b83618e01c9bfde44a0ea990.png)
+![img](MySQL实战.assets/4b9cb0e0b83618e01c9bfde44a0ea990.png)
 
 可以看到被驱动表t2的字段a上的索引被用到了。执行的流程为：
 
@@ -842,7 +842,7 @@ select * from t1 straight_join t2 on (t1.a=t2.a);
 
 流程图：
 
-![img](/home/xiaomi/myNotes/MySQL实战.assets/d83ad1cbd6118603be795b26d38f8df6.jpg)
+![img](MySQL2.assets/d83ad1cbd6118603be795b26d38f8df6.jpg)
 
 整个流程里：
 
