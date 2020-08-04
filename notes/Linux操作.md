@@ -1471,3 +1471,11 @@ tail  -n  10  test.log
 $netstat -ap | grep ssh
 ~~~
 
+
+
+# 看CPU占用高的进程
+
+先top 找出占用最高的进程的PID
+
+通过　top -H -p PID　查看这个进程
+

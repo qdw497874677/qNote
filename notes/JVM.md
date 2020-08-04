@@ -435,7 +435,7 @@ STW：在GC（MinorGC或FullGC）期间，只有垃圾回收器线程在工作�
 
 运作步骤:
 
-1. 初始标记(CMS initial mark)：STW，标记 GC Roots 能**直接关联**到的对象
+1. 初始标记(CMS initial mark)：STW，单线程，标记 GC Roots 能**直接关联**到的对象
 2. 并发标记(CMS concurrent mark)：进行 GC Roots Tracing。是和应用程序线程并发的。
 3. 重新标记(CMS remark)：STW，扫描剩余的对象，修正并发标记期间的变动部分
 4. 并发清除(CMS concurrent sweep)：清理垃圾对象，是和应用程序线程并发的。
