@@ -1801,6 +1801,13 @@ public class Test7 {
 
 ThreadLocal类可以让**每个线程绑定自己的值**。线程通过ThreadLocal获取自己现成的变量副本。
 
+场景：
+
+- 避免对象的多次传递。
+- 线程间的数据隔离，减少线程不安全的因素。
+- 进行事物操作时，用于存储线程事务信息。
+- 数据库连接，Session会话管理。
+
 ~~~java
 public class Local implements Runnable {
     private static final ThreadLocal<String> localStr = ThreadLocal.withInitial(()->"init");
@@ -1849,19 +1856,19 @@ public void set(T value) {
 
 所以变量是放在当前线程对应的ThreadLocalMap中，并不是存在ThreadLocal中。ThreadLocal可以理解为是ThreadLocalMap的封装，用来传递变量值。
 
-**ThreadLocal类中可以通过Thread.currentThread()获取到当前线程对象后，直接通过getMap(Thread t)可以访问到该线程的ThreadLocalMap对象。**
+**ThreadLocal类中可以通过Thread.currentThread()获取到当前线程对象后，直接通过getMap(Thread t)可以访问到该线程的ThreadLocalMap实例。**
 
 ### ThreadLocalMap
 
-ThreadLocalMap是ThreadLocal的静态内部类，可以存储以ThreadLocal为key 的键值对。
+ThreadLocalMap是ThreadLocal的静态内部类，里面定义了Entry来保存数据，可以存储以**ThreadLocal为key** 的键值对。还是继承的弱引用。
 
 ### 原理总结
 
-Thread类中有ThreadLocalMap类型的变量，存储以ThreadLocal为key的键值对。ThreadLocal可以通过获取当前线程获取ThreadLocalMap变量，然后根据自身ThreadLocal对象作为key找到对应的值。
+每个Thread类对应一个ThreadLocalMap类型的变量，每个ThreadLocalMap（即threadLocals）可以存储多个ThreadLocal实例（都是属于本线程的），存储以ThreadLocal为key的键值对。ThreadLocal实例可以通过获取当前线程获取ThreadLocalMap类型变量，然后根据自身ThreadLocal实例作为key找到对应的值，这个值就是当前线程中这个ThreadLocal实例对应set存储的值。
 
 ### 内存泄漏问题
 
-ThreadLocalMap使用的key是ThreadLocal的弱引用，而value是强引用。所以如果ThreadLocal没有被外部强引用的情况下，垃圾回收时，key会被清理掉，而value不会被清理掉。这样ThreadLocalMap中出现key为null的Entry。假如我们不做任何措施，**value永远无法被GC回收**，就出现了内存泄漏。ThreadLocalMap视线中已经考虑了这种情况，在调用set()、get()、remove()方法的时候，会清理掉key为null的记录。使用完ThreadLocal方法后最好手动调用remove()方法。
+ThreadLocalMap使用的key是ThreadLocal的弱引用，而value是强引用。所以如果ThreadLocal没有被外部强引用的情况下，垃圾回收时，key会被清理掉，而value不会被清理掉。这样ThreadLocalMap中出现key为null的Entry。假如我们不做任何措施，**value永远无法被GC回收**，就出现了内存泄漏。ThreadLocalMap视线中已经考虑了这种情况，在调用set()、get()、remove()方法的时候，会清理掉key为null的记录。使用完ThreadLocal方法后**最好手动调用remove()方法**。
 
 ~~~java
 staticclass Entry extends WeakReference<ThreadLocal<?>> {
@@ -1880,10 +1887,6 @@ staticclass Entry extends WeakReference<ThreadLocal<?>> {
 ### 案例
 
 SimpleDateFormat产生的实例是单例，在多线程情况下会有线程安全问题。可以在ThreadLocal中去创建来解决线程安全问题。
-
-
-
-
 
 
 
