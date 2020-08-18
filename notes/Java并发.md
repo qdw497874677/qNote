@@ -862,6 +862,136 @@ Java对象头的MarkWord里默认存储对象的HashCode、分代年龄和锁标
 
 
 
+### 生产者消费者模式
+
+用synchronized实现
+
+~~~java
+public class A {
+    public static void main(String[] args) {
+        Data data = new Data();
+        new Thread(()->{
+            for (int i = 0; i < 10; i++) {
+                data.increment();
+            }
+        },"A").start();
+        new Thread(()->{
+            for (int i = 0; i < 10; i++) {
+                data.decrement();
+            }
+        },"B").start();
+    }
+}
+class Data{
+    private int num = 0;
+    public synchronized void increment() {
+        if (num!=0){
+            try {
+                this.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        num++;
+        System.out.println(Thread.currentThread().getName()+"产生数据，num="+num);
+        this.notify();
+    }
+    public synchronized void decrement() {
+        if (num==0){
+            try {
+                this.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        num--;
+        System.out.println(Thread.currentThread().getName()+"取出数据，num="+num);
+        this.notify();
+    }
+}
+~~~
+
+用lock实现
+
+~~~java
+public class B {
+    public static void main(String[] args) {
+        Data2 data = new Data2();
+        new Thread(()->{
+            for (int i = 0; i < 50; i++) {
+                data.increment();
+            }
+        },"A").start();
+        new Thread(()->{
+            for (int i = 0; i < 50; i++) {
+                data.decrement();
+            }
+        },"B").start();
+        new Thread(()->{
+            for (int i = 0; i < 50; i++) {
+                data.increment();
+            }
+        },"C").start();
+        new Thread(()->{
+            for (int i = 0; i < 50; i++) {
+                data.decrement();
+            }
+        },"D").start();
+    }
+}
+class Data2{
+    private int num = 0;
+    Lock lock = new ReentrantLock();
+    Condition condition = lock.newCondition();
+    public void increment() {
+        lock.lock();
+        try {
+            while (num!=0){
+                try {
+                    condition.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            num++;
+            System.out.println(Thread.currentThread().getName()+"产生数据，num="+num);
+            condition.signalAll();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+    public void decrement() {
+        lock.lock();
+        try {
+            while (num==0){
+                try {
+                    condition.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            num--;
+            System.out.println(Thread.currentThread().getName()+"取出数据，num="+num);
+            condition.signalAll();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+~~~
+
+
+
+
+
+
+
+
+
 ### synchronized和Lock对比
 
 - 都是可重入锁
