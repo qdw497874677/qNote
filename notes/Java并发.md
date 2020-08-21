@@ -862,6 +862,136 @@ Java对象头的MarkWord里默认存储对象的HashCode、分代年龄和锁标
 
 
 
+### 生产者消费者模式
+
+用synchronized实现
+
+~~~java
+public class A {
+    public static void main(String[] args) {
+        Data data = new Data();
+        new Thread(()->{
+            for (int i = 0; i < 10; i++) {
+                data.increment();
+            }
+        },"A").start();
+        new Thread(()->{
+            for (int i = 0; i < 10; i++) {
+                data.decrement();
+            }
+        },"B").start();
+    }
+}
+class Data{
+    private int num = 0;
+    public synchronized void increment() {
+        if (num!=0){
+            try {
+                this.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        num++;
+        System.out.println(Thread.currentThread().getName()+"产生数据，num="+num);
+        this.notify();
+    }
+    public synchronized void decrement() {
+        if (num==0){
+            try {
+                this.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        num--;
+        System.out.println(Thread.currentThread().getName()+"取出数据，num="+num);
+        this.notify();
+    }
+}
+~~~
+
+用lock实现
+
+~~~java
+public class B {
+    public static void main(String[] args) {
+        Data2 data = new Data2();
+        new Thread(()->{
+            for (int i = 0; i < 50; i++) {
+                data.increment();
+            }
+        },"A").start();
+        new Thread(()->{
+            for (int i = 0; i < 50; i++) {
+                data.decrement();
+            }
+        },"B").start();
+        new Thread(()->{
+            for (int i = 0; i < 50; i++) {
+                data.increment();
+            }
+        },"C").start();
+        new Thread(()->{
+            for (int i = 0; i < 50; i++) {
+                data.decrement();
+            }
+        },"D").start();
+    }
+}
+class Data2{
+    private int num = 0;
+    Lock lock = new ReentrantLock();
+    Condition condition = lock.newCondition();
+    public void increment() {
+        lock.lock();
+        try {
+            while (num!=0){
+                try {
+                    condition.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            num++;
+            System.out.println(Thread.currentThread().getName()+"产生数据，num="+num);
+            condition.signalAll();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+    public void decrement() {
+        lock.lock();
+        try {
+            while (num==0){
+                try {
+                    condition.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            num--;
+            System.out.println(Thread.currentThread().getName()+"取出数据，num="+num);
+            condition.signalAll();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+~~~
+
+
+
+
+
+
+
+
+
 ### synchronized和Lock对比
 
 - 都是可重入锁
@@ -1864,7 +1994,7 @@ ThreadLocalMap是ThreadLocal的静态内部类，里面定义了Entry来保存�
 
 ### 原理总结
 
-每个Thread类对应一个ThreadLocalMap类型的变量，每个ThreadLocalMap（即threadLocals）可以存储多个ThreadLocal实例（都是属于本线程的），存储以ThreadLocal为key的键值对。ThreadLocal实例可以通过获取当前线程获取ThreadLocalMap类型变量，然后根据自身ThreadLocal实例作为key找到对应的值，这个值就是当前线程中这个ThreadLocal实例对应set存储的值。
+每个Thread类对应一个ThreadLocalMap类型的变量，每个ThreadLocalMap（即threadLocals）可以存储多个ThreadLocal实例（都是属于本线程的），存储以ThreadLocal为key的键值对。ThreadLocal实例可以set值，可以获取值。ThreadLocal实例可以通过获取当前线程获取ThreadLocalMap类型变量，然后根据自身ThreadLocal实例作为key找到对应的值，这个值就是当前线程中这个ThreadLocal实例对应set存储的值。
 
 ### 内存泄漏问题
 
