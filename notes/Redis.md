@@ -3672,6 +3672,20 @@ failover-timeout 可以用在以下这些方面：
 
 
 
+# I/O模型
+
+## Blocking I/O
+
+![image-20200823002705078](Redis.assets/image-20200823002705078.png)
+
+## I/O多路复用
+
+![image-20200823002730017](Redis.assets/image-20200823002730017.png)
+
+## Redis的Reactor设计模式
+
+![image-20200823002909046](Redis.assets/image-20200823002909046.png)
+
 
 
 # 数据类型实现原理
