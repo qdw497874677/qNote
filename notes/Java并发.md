@@ -1606,7 +1606,9 @@ Thread类提供的一个方法，已经被启用，因为这个方法不安全�
 
 ### interrupt()
 
-interrupt()不会立刻终止线程的所有活动，而是在线程中做一个终止的标记。就是通知线程希望你能终止。
+interrupt()直接终止一个线程，而是在线程中做一个终止的标记，**需要被中断的线程自己处理中断**。
+
+线程A通过interrupt()将线程B的中断状态设置为true，线程B的代码中可以在合适的时候调用isInterrupted()或者interrupted()来检测状态，并添加相应的处理。
 
 ~~~java
 public boolean Thread.isInterrupted() //是实例方法　判断是否被中断
@@ -1633,6 +1635,23 @@ public void run() {
 ~~~
 
 如果线程被Object.wait, Thread.join和Thread.sleep三种方法之一阻塞，此时调用线程interrupted()方法，那么该线程将抛出一个 InterruptedException中断异常（该线程必须事先预备好处理此异常），从而提早地终结被阻塞状态。如果线程没有被阻塞，这时调用 interrupt()将不起作用，直到执行到wait(),sleep(),join()时,才马上会抛出 InterruptedException。
+
+
+
+### 类库中有哪些调用 interrupt()
+
+- FutureTask()中的cancel()，如果传入参数为true，他将会在运行异步任务的线程上调用 interrupt()
+- ThreadPoolExecutor线程池中的shutdownNow()会遍历线程池中的工作线程并调用线程的interrupt()
+
+
+
+## 线程间通信
+
+- 通过共享变量，变量可用volatile修饰，保证可见性；可以对访问变量的方法或者代码块加锁；可以用原子类来替换变量，让他的他的变化变为原子性的。
+- 可以用同步机制，比如synchronized 配合wait() notify()；Lock配合Condition的await()、signal()
+- 可以用同步队列或者相关的同步工具类，比如CountDownLatch、CyclicBarrier、Semaphore
+
+
 
 
 

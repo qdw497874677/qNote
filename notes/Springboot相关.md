@@ -1,5 +1,25 @@
 [**首页**](https://github.com/qdw497874677/myNotes/blob/master/首页检索.md)
 
+
+
+# Springboot
+
+## 启动方法
+
+![image-20200830100946151](Springboot后续.assets/image-20200830100946151.png)
+
+- 通过静态run方法
+- 创建SpringApplication实例，通过api调整应用行为
+- 链式调用
+
+## 自动配置原理
+
+![image-20200830101049495](Springboot后续.assets/image-20200830101049495.png)
+
+
+
+
+
 # Swagger
 
 ## 前后端分离
