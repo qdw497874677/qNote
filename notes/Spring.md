@@ -69,6 +69,36 @@ public static Object newProxyInstance(ClassLoader loader,
 
 
 
+## spring循环依赖
+
+什么是循环依赖：两个或两个以上的Bean互相持有对方，最终形成闭环。比如A中有B属性，B中有C属性，C中有A属性。
+
+### Spring怎么处理
+
+Spring的单例对象的初始化分为三步：
+
+1. createBeanInstance：实例化，就是调用对象的构造方法实例化对象
+2. populateBean：填充属性，主要是填充对其他bean的依赖
+3. initializeBean：调用spring xml中的init方法
+
+循环依赖主要发生在一、二中，也就是构造器循环依赖和field循环依赖。
+
+Spring为了解决单例的循环依赖问题使用了三级缓存：
+
+1. 三级缓存：singletonFactories：单例对象工厂的cache
+2. 二级缓存：earlySingletonObjects：提前曝光的单例对象的cache
+3. 一级缓存：singletonObjects：单例对象的cache
+
+从缓存中获取bean用getSingleton()，先从一级缓存然后二级然后三级。
+
+在一个bean A创建的第一步就把自己放到三级缓存中了，发现自己依赖B，从缓存中没找到创建B把B获取，B创建的时候把自己放入三级缓存，发现自己依赖A就去缓存中获取到不完整的A，然后B完成所有的初始化进入了一级缓存。A拿到了完整的B（B获取到了A的引用）
+
+所以Spring不能解决构造器的循环引用
+
+
+
+
+
 ## 用到的设计模式
 
 - **工厂设计模式** : Spring使用工厂模式通过 `BeanFactory`、`ApplicationContext` 创建 bean 对象。

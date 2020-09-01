@@ -3686,6 +3686,14 @@ failover-timeout 可以用在以下这些方面：
 
 ![image-20200823002909046](Redis.assets/image-20200823002909046.png)
 
+- 多个socket
+- 多路复用模块
+  - 实现有：select、epoll、evport、kqueue
+- 事件分发器
+- 事件处理器
+
+
+
 
 
 # 数据类型实现原理
