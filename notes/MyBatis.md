@@ -6,9 +6,25 @@
 
 ORM框架。可以通过XML或者注解
 
-## {}和 ${}的区别是什么？
+## #{}和 ${}的区别是什么？
 
-\#{}是预编译处理，${}是字符替换。 在使用 #{}时，MyBatis 会将 SQL 中的 #{}替换成“?”，配合 PreparedStatement 的 set 方法赋值，这样可以有效的防止 SQL 注入，保证程序的运行安全。
+\#{}是预编译处理，${}是字符替换。 在使用 #{}时，MyBatis 会将 SQL 中的 #{}替换成“?”，配合 PreparedStatement 的 set 方法赋值，自动进行java类型和jdbc类型转换，这样可以有效的防止 SQL 注入，保证程序的运行安全。
+
+
+
+## 缓存
+
+目的就是提升查询效率和减少数据库压力。MyBatis有一级缓存、二级缓存、预留了集成第三方缓存的接口
+
+### 一级缓存
+
+也叫本地缓存。在会话（SqlSession）层面进行缓存。默认是开启的。MyBatis在开启一个数据库会话时会创建一个新的SqlSession对象，在一个SqlSession中对每次查询的结果缓存起来。会话结束时释放。每一个SqlSession都有一个自己Executor，每一个Executor都有一个自己的的缓存
+
+### 二级缓存
+
+二级缓存用来解决一级缓存不能跨会话共享的问题，范围是namespace级别的，可以被多个SqlSession共享（调用的是同一个接口中的相同方法就能用到缓存）。
+
+开启了二级缓存后，SqlSession之间可以共享缓存。
 
 
 
@@ -236,6 +252,10 @@ students属性的类型为List<Student>
 
 # 动态SQL
 
+可以根据条件动态的拼接sql语句
+
+
+
 ## IF
 
 ~~~xml
@@ -341,14 +361,3 @@ students属性的类型为List<Student>
 
 
 
-# 缓存
-
-## 一级缓存
-
-每一个SqlSession都有一个自己Executor，每一个Executor都有一个自己的的缓存
-
-
-
-## 二级缓存
-
-开启了二级缓存后，SqlSession之间可以共享缓存。
