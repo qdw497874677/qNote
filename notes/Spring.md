@@ -8,13 +8,29 @@
 
 为了方便组件的扩展，一类组件往往用工厂模式。如果业务类对组件的控制力过强，就不是很灵活。将组件的创建和属性注入交给IOC容器来托管。变更组件和注入不同的属性都可以通过文件配置的方式，让IOC容器理解，可以减少变更的代码量。
 
-控制翻转。是一种思想。将组件的创建和协调工作交给Spring容器，在需要的地方让Spring容器把依赖的对象注入进来。降低了代码之间的耦合度，将组件的选择和属性的注入放到配置文件中，将组件的控制权交给IOC容器
+控制翻转。是一种思想。将组件的创建和协调的工作交给Spring容器，在需要的地方让Spring容器把依赖的对象注入进来。降低了代码之间的耦合度，将组件的选择和属性的注入放到配置文件中，将组件的控制权交给IOC容器
 
 ### 原理
 
 
 
+
+
+## SpringMVC
+
+MVC是一种设计模式，将web层进行解耦（**用户**与**控制器**之间发送请求、返回响应；**控制器**与模型之间数据处理、返回结果；**控制器**与**视图**之间推送模型，响应结果）。SpringMVC就是在Spring平台上的实现的MVC开发框架。
+
+主要核心就是：DispatcherServlet把收到的请求分别依次委托给各个组件去处理：HanderMapping（处理器映射器）、HanderAdapter（处理器适配器）去做处理返回ModelAndView、ViewResolver（视图解析器）把ModelAndView解析为View、View（视图）最后处理把最终结果返回给DispatcherServlet。DispatcherServlet对请求作出响应。
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20190630145911981.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2xpdGlhbnhpYW5nX2thb2xh,size_16,color_FFFFFF,t_70)
+
+
+
+
+
 ## Springboot
+
+简化了Spring中的各种配置，不需要xml配置文件来配置各种bean的关系了
 
 SpringBoot的配置原理
 
