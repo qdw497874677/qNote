@@ -3650,7 +3650,7 @@ failover-timeout 可以用在以下这些方面：
 
 
 
-# 实现消息队列
+# 实现消息队列（待更新！！！）
 
 - 生产者
   - 用lpush
@@ -3662,6 +3662,16 @@ failover-timeout 可以用在以下这些方面：
 可以用brpop或blpop。阻塞的pop还可以接收多个键，是按照key的顺序，可以实现具有优先级的队列。
 
 
+
+
+
+在消息队列中，并没有JMS的ack机制，如果消费者把job给Pop走了又没处理完就死机了怎么办？
+
+解决方法之一是加多一个sorted set，分发的时候同时发到list与sorted set，以分发时间为score，用户把job做完了之后要用ZREM消掉sorted set里的job，并且定时从sorted set中取出超时没有完成的任务，重新放回list。
+
+另一个做法是为每个worker多加一个的list，弹出任务时改用RPopLPush，将job同时放到worker自己的list中，完成时用LREM消掉。
+
+如果集群管理(如zookeeper)发现worker已经挂掉，就将worker的list内容重新放回主list。
 
 # 实现延时队列
 
