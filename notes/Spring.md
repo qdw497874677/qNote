@@ -94,6 +94,18 @@ SpringBoot的配置原理
 
 通过application.yml文件
 
+### 简化Bean配置
+
+怎么让jar中的类作为Bean让Spring管理呢？
+
+通过注解@Configuration 和@Bean
+
+在加上@Configuration的类（表示配置类）中的一个方法上加上@Bean，方法返回的就作为Bean让容器管理了。
+
+### 简化部署
+
+SpringBoot内置了tomcat，将项目打成jar包可以直接启动web项目
+
 ### 怎么配置（待更新！！！）
 
 
@@ -102,7 +114,7 @@ SpringBoot的配置原理
 
 
 
-## 动态代理详解
+## 动态代理详解（待更新！！）
 
 https://www.jianshu.com/p/aaeb2355ec5c
 

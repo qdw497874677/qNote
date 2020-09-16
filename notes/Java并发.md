@@ -30,11 +30,17 @@ CPU通过给每个线程分配时间片来达到单线程也支持多线程执�
 - 让线程拥有自己的资源
   - ThreadLocal
 
+### 线程通信的方式
+
+- join、sleep、yield
+- synchronized  + wait、notify、notifyAll
+- ReentrantLock + Condition + await、signal、signalAll
+
 
 
 ## Java内存模型（JMM）
 
-> JMM本身是一种抽象的概念，并不真实存在。它描述的是一种规范或者约定。这种规范定义了程序中各个变量（包括实例字段，静态字段和构成数组对象的元素）的访问方式。
+> JMM本身是一种抽象的概念。它描述的是一种规范或者约定。这种规范定义了程序中各个变量（包括实例字段，静态字段和构成数组对象的元素）的**访问方式**。用来屏蔽各个硬件平台和操作系统的内存访问差异，以实现让Java程序在各个平台下都能达到一致的内存访问效果。
 
 ### 并发编程模型的两个关键问题
 
@@ -800,9 +806,13 @@ public class Test7 {
 
 ### 乐观锁和悲观锁
 
-乐观锁总是任务并发时，不会发生冲突，发生之后再去解决。Java中的CAS就是一个乐观锁的实现。
+- 乐观锁总是任务并发时，不会发生冲突，发生之后再去解决。一般是通过版本号去比对操作的数据在期间是否有被别人修改
+  - Java中的乐观锁基本都是通过CAS操作实现的。 CAS是一种更新的原子操作，会比对目标值是不是和期望值相等，相等则更新。
 
-悲观锁总是认为并发时，总会发生冲突，采用互斥的策略。比如Java中的synchronized。
+- 悲观锁总是认为并发时，总会发生冲突，采用互斥的策略。
+  - 比如Java中的synchronized。
+
+AQS框架下的锁则是先尝试用CAS乐观锁去获取锁，如果没有获取到，才转为悲观锁的方式。如RetreenLock
 
 
 
@@ -1012,9 +1022,33 @@ class Data2{
 
 
 
+### 双重检查锁单例
 
+~~~java
+public class LazyMan {
+    private LazyMan(){
+    }
+    //加上volatile防止指令重排
+    private volatile static LazyMan lazyMan;
+    public static LazyMan getInstance(){
+        //外面再判断一次为了效率，如果存在对象就不进入同步代码块了
+        if (lazyMan == null){
+            //加锁如果两个线程同时进入这个方法，可能创建两个实例
+            synchronized (LazyMan.class){
+                if (lazyMan == null){
+                    //可能发生指令重排产生错误
+                    lazyMan = new LazyMan();
+                }
+            }
+        }
+        return lazyMan;
+    }
+}
+~~~
 
-
+- 第一个if：在进入同步块之前先判断一下是否实例已经创建
+- synchronized：防止两个线程同时判断为null后去new实例
+- volatile：创建实例的过程字节码分为三步：1.分配对象内存空间，2.调用构造方法进行初始化，3.将对象引用赋值给引用变量（此时引用变量的引用不为null）。jvm运行时2和3可能发生重排，他们只依赖于1的执行结果。
 
 
 
@@ -1865,11 +1899,11 @@ public void run() {
 
 ## 创建线程
 
-### 继承Thread
+### 继承Thread类
 
-### 实现Runnable
+### 实现Runnable接口
 
-### 实现Callable
+### 实现Callable接口
 
 有返回值
 
@@ -1903,8 +1937,6 @@ class MyThread implements Callable<Integer>{
 Runnable接口不会返回结果或抛出异常检查，Callable接口可以。
 
 工具类Executors可以实现两者实现类对象之间的像话转化。（Executors.callable（Runnable task）或 Executors.callable（Runnable task，Object resule））。
-
-
 
 
 
