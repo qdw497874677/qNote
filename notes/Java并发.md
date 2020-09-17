@@ -318,6 +318,8 @@ var5不断地变成最新值，如果比较成功了，就把var4加上。这个
 
 > 线程T1在执行CAS操作中，如果主存中的值被线程T2从A变为B之后又变为A，T1的CAS操作是发现不到的，认为没有变化，实际上是被别的线程动过的。
 
+可以通过多加一个版本字段来实现
+
 #### 原子引用AtomicReference
 
 AtomicReference可以让类成为原子类。
@@ -425,169 +427,6 @@ public class Test3 {
 例如。AtomicInteger 类主要利用 CAS (compare and swap) + volatile 和 native 方法来保证原子操作，从而避免 synchronized 的高开销，执行效率大为提升。
 
 
-
-## 集合类不安全
-
-### ArrayList
-
-#### 线程不安全的例子
-
-~~~java
-public class Test4 {
-    public static void main(String[] args) {
-        List<String> list = new ArrayList<>();
-        for (int i = 0; i < 100; i++) {
-            new Thread(()->{
-                list.add(UUID.randomUUID().toString().substring(0,8));
-//                System.out.println(list);
-            },String.valueOf(i)).start();
-
-        }
-        while (Thread.activeCount()>2){
-            Thread.yield();
-        }
-        System.out.println(list);
-    }
-}
-~~~
-
-
-
-#### 解决方法
-
-- Vector（加锁的ArrayList）
-- Collections.synchronizedList(new ArrayList<>())（通过工具类转换为一个线程安全的集合）
-- CopyOnWriteArrayList
-
-##### CopyOnWriteArrayList
-
-
-
-> 写时复制。读写分离的思想。
->
-> 写入元素的时候，先把原数组复制一份把新元素放到新数组上面。然后把数组引用指向新数组。
->
-> 写的时候是会加锁的。读在原数组上读，读写分离不影响，所以可以同时读写性能好，同时写操作也加了锁保证并发安全
-
-add方法
-
-~~~java
-//array是用volatile修饰的
-private transient volatile Object[] array;
-
-public boolean add(E e) {
-        final ReentrantLock lock = this.lock;
-        lock.lock();
-        try {
-            Object[] elements = getArray();
-            int len = elements.length;
-            Object[] newElements = Arrays.copyOf(elements, len + 1);
-            newElements[len] = e;
-            setArray(newElements);
-            return true;
-        } finally {
-            lock.unlock();
-        }
-    }
-~~~
-
-
-
-### HashSet
-
-> HashSet底层是一个初始容量为16，负载因子为0.75的HashMap。用HashMap的key存元素，value是一个Object类型的常量。
-
-#### 线程不安全例子
-
-~~~java
-public class Test4 {
-    public static void main(String[] args) {
-//        List<String> list = new ArrayList<>();
-//        List<String> list = Collections.synchronizedList(new ArrayList<>());
-//        List<String> list = new CopyOnWriteArrayList<>();
-        Set<String> set = new HashSet<>();
-        for (int i = 0; i < 100; i++) {
-            new Thread(()->{
-                set.add(UUID.randomUUID().toString().substring(0,8));
-                System.out.println(set);
-            },String.valueOf(i)).start();
-        }
-        while (Thread.activeCount()>2){
-            Thread.yield();
-        }
-        System.out.println(set);
-    }
-}
-~~~
-
-
-
-#### 解决方法
-
-- Collections.synchronizedSet(new HashSet<>())
-- CopyOnWriteArraySet
-
-##### CopyOnWriteArraySet
-
-> CopyOnWriteArraySet底层是CopyOnWriteArrayList。
-
-add最终会调用CopyOnWriteArrayList中的一个方法，addIfAbsentadd元素前要检查集合中是否包含这个元素。
-
-~~~java
-private boolean addIfAbsent(E e, Object[] snapshot) {
-        final ReentrantLock lock = this.lock;
-        lock.lock();
-        try {
-            Object[] current = getArray();
-            int len = current.length;
-            if (snapshot != current) {
-                // Optimize for lost race to another addXXX operation
-                int common = Math.min(snapshot.length, len);
-                for (int i = 0; i < common; i++)
-                    if (current[i] != snapshot[i] && eq(e, current[i]))
-                        return false;
-                if (indexOf(e, current, common, len) >= 0)
-                        return false;
-            }
-            Object[] newElements = Arrays.copyOf(current, len + 1);
-            newElements[len] = e;
-            setArray(newElements);
-            return true;
-        } finally {
-            lock.unlock();
-        }
-    }
-~~~
-
-
-
-### HashMap
-
-#### 例子
-
-~~~java
-public class Test4 {
-    public static void main(String[] args) {
-        Map<String,String> map = new HashMap();
-        for (int i = 0; i < 100; i++) {
-            new Thread(()->{
-                map.put(Thread.currentThread().getName(),UUID.randomUUID().toString().substring(0,8));
-                System.out.println(map);
-            },String.valueOf(i)).start();
-        }
-        while (Thread.activeCount()>2){
-            Thread.yield();
-        }
-        System.out.println(map);
-    }
-}
-~~~
-
-
-
-#### 解决方法
-
-- ConcurrentHashMap<>()
 
 
 
@@ -820,17 +659,17 @@ AQS框架下的锁则是先尝试用CAS乐观锁去获取锁，如果没有获�
 
 ### synchronized
 
-synchronized是Java关键字，解决多个线程之间访问资源的同步性，可以保证被它修饰的方法或者代码块在任意时刻只能有一个线程执行。synchronized 代码块是由一对儿 monitorenter/monitorexit 指令实现的，**Monitor 对象是同步的基本实现单元**
+synchronized是Java关键字，**解决多个线程之间访问资源的同步性**，可以保证被它修饰的方法或者代码块在**任意时刻只能有一个线程执行**。synchronized 代码块是由一对儿 monitorenter/monitorexit 指令实现的，**Monitor 对象是同步的基本实现单元**
 
 Java早期版本中，synchronized主要靠操作系统内部的互斥锁，是一个无差别的重量级操作，属于重量级锁。Java6之后官方从JVM层面对synchronized进行了优化，提供了三种Monitor 实现。
 
-#### synchronized保证：
+#### 特性
 
 - 原子性
 - 可见性
 - 有序性
 
-#### synchronized可以修饰：
+#### 使用场景
 
 java中每一个对象都可以作为锁。
 
@@ -840,53 +679,58 @@ java中每一个对象都可以作为锁。
 
 尽量不要对带有常量池的对象加锁。
 
-#### synchronized底层原理
+#### 底层原理
 
-1. 修饰代码块
+##### 对象构成
 
-在字节码中显示，同步块的实现使用monitorenter和monitorexit指令。前置在同步块的开始位置，后者在结束位置。（重量级锁）当执行monitorenter指令时，线程试图获取对象的monitor（monitor对象存在于每个Java对象的对象头）的持有权。当计数器为0就可以成功获取。获取后计数器加1。执行monitorexit指令后，计数器减1。如果获取monitor失败，当前线程就要阻塞等待。
+对象在内存中分为三块区域
 
-2. 修饰方法
+- 对象头
+  - Mark Word（标记字段）：默认存储对象的HashCode、分代年龄、锁标志位信息。它会根据对象状态（锁标志位），改变自己存储的内容。
+  - Klass Point（类型指针）：对象的这个指针指向它的类元数据，表示自己是哪个类的实例。
+- 实例数据
+  - 主要存放类的数据信息，父类的信息
+- 对其填充：为了字节对齐
 
-在字节码中显示，用ACC_SYNCHRONIZED标识这个方法为同步方法。JVM通过这个标识辨别方法是否为同步，从而执行响应的同步操作。（重量级锁）当某个线程要访问某个方法时，会检查是否有ACC_SYNCHRONIZED，如果有设置就要先获得监视器锁，然后执行方法，执行后释放监视器锁。
+##### 同步代码
 
-不管是哪种方式，都是对一个对象监视器进行获取，这个获取是排他的。
+对象头会关联一个monnitor对象。
 
-#### 1.6之后synchronized做了什么优化
+- 当进入同步代码时，执行**monitorenter**，就获取想要同步的对象的所有权，这时monitor的进入数+1，这个线程就是这个monitor的拥有者。
+- 如果你已经是这个monitor的拥有者了，再次进入会把进入数再+1
+- 当同步代码执行完，执行完**monitorexit**，进入数-1，当到0时，这个monitor才能被别的线程拥有。
 
-锁主要存在四种状态：无锁状态、偏向锁状态、轻量级锁状态、重量级锁状态。他们随着竞争的激烈逐渐升级。只可升级不可降级。这种策略为了提高获得锁和释放锁的效率。
+##### 同步方法
 
-先解释对象头。
+同步方法的时候，判断是否有这个标志位**ACC_SYNCHRONIZED**，有的话会隐式调用上面那两个指令monitorenter和monitorexit。
 
-synchronized用的锁存在Java对象头中。jvm用三个字宽（Word）存储对象头（如果不是数组类型， 有两个）
+##### monitor
 
-- Mark Word：存储对象的hashCode或锁信息等。长度32/64bit
-- Class Metadata Address：存储到对象类型数据的指针。长度32/64bit
-- Array length：数组的长度（如果当前对象是数组）。长度32/64bit
+是C++写的。属性包括：重入次数、当前持有的线程、wait状态的线程列表、等待锁状态的线程列表等等
 
-Java对象头的MarkWord里默认存储对象的HashCode、分代年龄和锁标志位。
+#### 锁升级优化
 
-- 偏向锁
+重量级锁涉及用户态和内核态的切换，为了减少资源的消耗，调用了不同的实现去获取锁，失败就去用更高级的实现，锁的重量级越来越大。
+
+锁主要存在四种状态：无锁状态、偏向锁状态、轻量级锁状态、重量级锁状态。他们随着竞争的激烈逐渐升级。过程不可逆。这种策略为了提高获得锁和释放锁的效率。
+
+##### 偏向锁
 
 引入偏向锁和引入轻量级锁的目的很像，他们都是为了没有多线程竞争的前提下，减少传统的重量级锁带来的性能消耗。不同的是轻量级锁在无竞争的情况下使用CAS操作代替使用互斥量；而偏向锁在无竞争的情况下会把整个同步都消除掉。
 
-1. 获取锁：当一个线程访问同步块并获取锁时，会用CAS**在对象头和栈帧中的锁记录里存储锁偏向的线程ID**，以后这个线程再进入和退出同步块时就不需要进行CAS操作来加锁和解锁，只需要简单地测试一下对象头的Mark Word里是否存储着指向当前线程的偏向锁。如果测试成功，表示线程已经获得了锁。如果测试失败，则需要再测试一下Mark Word中偏向锁的标识是否设置为1（表示当前是偏向锁）。如果没有设置，就使用CAS竞争锁；如果设置了，则尝试使用CAS将对象头的偏向锁指向当前线程。
-2. 撤销锁：当有其他线程尝试访问同步块时，尝试将MarkWord替换为自己的线程，发现替换不成功，就会撤销偏向锁，之前正在执行的线程要暂停等待偏向锁撤销之后再继续运行。
+1. 获取锁：当前成进入同步代码，先用CAS尝试获取monitor，一旦获取到了就把对象头中偏向锁标志位改为1，并把线程id记录在对象头中
+2. 撤销锁：如果其他线程尝试获取锁，用CAS尝试修改和替换对象头失败，偏向锁就会撤销，之前执行的线程要暂停等待偏向锁撤销后再执行。之后这个对象的锁就升级为轻量级锁
 
-偏向锁，会偏向第一个获得它的线程，如果接下来的执行中，该锁没有被其他线程获取，那线程就不需要进行同步。在净重激烈的场合，偏向锁失效，优先升级为轻量级锁。
+##### 轻量级锁
 
-- 轻量级锁（1.6之后加入的）
+1. 获取锁：线程要获取锁，如果这个对象是无锁的，jvm就会在当前线程的栈帧中建立一个存放锁记录的空间，锁对象的Mark Word拷贝进去。然后线程尝试使用CAS将对象头中的MarkWord替换为指向栈帧中锁记录的指针（相当于相互都有对方的信息）。如果成功替换就说明获取到了锁
+2. 解锁：如果没有替换成功，表示当前锁存在竞争，继续锁升级。
 
-轻量级锁，用CAS代替互斥量，在没有多线程竞争的前提下，减少重量级锁使用操作系统互斥量产生的性能消耗。在有竞争的情况下，会比重量级锁更慢，所以会升级为重量级锁。
+##### 自旋锁
 
-1. 加锁：线程执行同步块之前，JVM会先在当前线程的栈帧中创建用于存储锁记录的空间，并**将对象头中的Mark Word复制到锁记录中。然后线程尝试使用CAS将对象头中的MarkWord替换为指向锁记录的指针**（相当于相互都有对方的信息）。如果成功当前线程就获取锁；如果失败，表示其他线正在竞争锁，当前线程便尝试使用自旋在获取锁。
-2. 解锁：使用CAS将栈帧中的MarkWord副本替换回到对象头MarkWord位置。如果成功，则表示没有竞争发生；如果失败，表示当前锁存在竞争，锁就会膨胀成重量级锁。
+通过在用户态适当的自旋，减少到内核态的切换。自旋重试默认为10次，如果都失败了就升级为重量级锁。
 
-- 自旋锁和自适应自旋
 
-轻量级锁失败后，虚拟机为了避免线程真实地在操作系统层面挂起，还会使用自旋锁优化。（自旋占用处理器，阻塞状态不占用处理器但是切换耗时）如果自旋超过了一定次数，就要挂起线程了。
-
-1.6加入自适应的自旋锁，自旋的时间不固定，而是由上一次同一个锁上的自旋时间和锁拥有者的状态决定。
 
 - 锁消除
 
@@ -1247,9 +1091,9 @@ protected final boolean tryRelease(int releases) {
 
 #### 公平获取锁的tryAcquire(）
 
-FairSync类中的公平获取方法。这里面的getExclusiveOwnerThread()判断阻塞的是不是自己线程，体现了可重用性，如果独占线程是自己，就设置state接着+1。getExclusiveOwnerThread()是AQS中就实现的方法，来获取当前同步器的独占线程
+FairSync类中的公平获取方法。这里面的getExclusiveOwnerThread()判断独占资源的线程是不是自己，体现了可重用性，如果独占线程是自己，就设置state接着+1。getExclusiveOwnerThread()是AQS中就实现的方法，来获取当前同步器的独占线程
 
-公平的关键方法：hasQueuedPredecessors()，通过这个判断可以让获取锁的线程检查自己是不是队列的下一个。
+公平的关键方法：用aqs提供的hasQueuedPredecessors()，通过这个判断当前线程是不是阻塞队列的第一个。（所以线程获取锁必须要先进队列然后从队列中出来）
 
 ~~~java
 final void lock() {
@@ -1260,7 +1104,7 @@ protected final boolean tryAcquire(int acquires) {
             final Thread current = Thread.currentThread();
             int c = getState();
             if (c == 0) {
-                //判断前面是否有线程正在阻塞中,如果没有才去尝试获取锁
+                //判断当前线程是不是阻塞队列的第一个,如果没有才去尝试获取锁
                 if (!hasQueuedPredecessors() &&
                     compareAndSetState(0, acquires)) {
                     setExclusiveOwnerThread(current);
@@ -1320,7 +1164,7 @@ final boolean nonfairTryAcquire(int acquires) {
 }
 ~~~
 
-通过CAS设置state为1，如果成功了就说明获取到了锁。非公平的获取中没有是否是队列第一个的这个判断。所以在释放锁通知队列第一个来获取的期间，可能有别的线程主动获取了锁。造成了不公平的现象。
+通过CAS设置state为1，如果成功了就说明获取到了锁。非公平的获取中没有是否是队列第一个的这个判断。所以在释放锁通知队列第一个来获取锁的期间，可能有别的线程主动获取了锁。造成了不公平的现象。
 
 
 
