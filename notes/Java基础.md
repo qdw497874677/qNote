@@ -587,6 +587,8 @@ System.out.println(s1==s2);//false
 
 StringBuilder类中修改字符串是针对对象本身，不会像String去生成新的对象重新赋给变量引用。它不是线程安全的。
 
+默认字符数组长度为参数长度+16，扩容时先长度*2+2，如果还不够就直接扩容到需要的长度。
+
 - StringBuffer
 
 StringBuffer类是线程安全的，他的很多方法用了synchronized。
