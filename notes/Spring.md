@@ -152,7 +152,7 @@ Spring的单例对象的初始化分为三步：
 
 循环依赖主要发生在一、二中，也就是构造器循环依赖和field循环依赖。
 
-Spring为了解决单例的循环依赖问题使用了三级缓存：
+Spring为了解决单例的循环依赖问题使用了**三级缓存**：
 
 1. 三级缓存：singletonFactories：单例对象工厂的cache
 2. 二级缓存：earlySingletonObjects：提前曝光的单例对象的cache
@@ -166,6 +166,42 @@ Spring为了解决单例的循环依赖问题使用了三级缓存：
 
 
 
+## Bean的作用域
+
+五种作用域
+
+| 作用域      | 描述                                                         |
+| ----------- | ------------------------------------------------------------ |
+| singleton   | 在spring IoC容器仅存在一个Bean实例，Bean以单例方式存在，bean作用域范围的默认值。 |
+| prototype   | 每次从容器中调用Bean时，都返回一个新的实例，即每次调用getBean()时，相当于执行newXxxBean()。 |
+| request     | 每次HTTP请求都会创建一个新的Bean，该作用域仅适用于web的Spring WebApplicationContext环境。 |
+| session     | 同一个HTTP Session共享一个Bean，不同Session使用不同的Bean。该作用域仅适用于web的Spring WebApplicationContext环境。 |
+| application | 限定一个Bean的作用域为`ServletContext`的生命周期。该作用域仅适用于web的Spring WebApplicationContext环境。 |
+
+
+
+## Bean的生命周期
+
+从创建Spring容器开始，到Spring容器销毁Bean
+
+- 实例化BeanFactoryPostProcessor实现类
+- 执行BeanFactoryPostProcessor的postProcessBeanFactory方法
+- 实例化BeanPostProcessor实现类
+- 实例化
+- 执行前置方法
+- 执行Bean的构造器
+- 执行前置方法
+- 为Bean注入属性
+- 设置Bean名字
+- 设置Bean工厂
+- 执行初始化前置方法
+
+
+
+## Spring事务
+
+service实现类或方法中加上@Transactional注解后，在service实现类在被调用时注入的就是service的代理对象
+
 
 
 ## 用到的设计模式
@@ -178,6 +214,11 @@ Spring为了解决单例的循环依赖问题使用了三级缓存：
 - **观察者模式:** Spring 事件驱动模型就是观察者模式很经典的一个应用。
 - **适配器模式** :Spring AOP 的增强或通知(Advice)使用到了适配器模式、spring MVC 中也是用到了适配器模式适配`Controller`。
 
+
+
+## 过滤器和拦截器的区别
+
+https://www.jianshu.com/p/7bd0cad17f23
 
 # @Scheduled
 
@@ -379,6 +420,8 @@ Spring定义了7中传播行为。主要就是当一个事务方法去调用另�
 
 
 
+
+## 
 
 
 

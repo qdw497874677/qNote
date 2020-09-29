@@ -586,6 +586,28 @@ MySQL的基本存储结构是页，数据都记录在页里面。**一页默认�
 
 只要redolog和binlog保证持久化到磁盘，就能确保MySQL重启后，数据可恢复。
 
+### file sort
+
+> 如果有order by场景，要利用索引的有序性，order by最后的字段应该作为索引的一部分，并且放在索引组合顺序的最后，避免出现file sort的情况。
+
+如果order by的列没有索引，就是file sort，可以理解为外部排序，把select的结果根据字段在内存中进行一次排序
+
+
+
+在MySQL通常有如下算法来完成排序：
+
+- 内存排序（优先队列 order by limit 返回少量行常用，提高排序效率，但是注意order by limit n,m 如果n过大可能会涉及到排序算法的切换）
+- 内存排序（快速排序）
+- 外部排序（归并排序）
+
+
+
+我们在执行计划中如果出现filesort字样通常代表使用到了排序，但是执行计划中看不出来下面问题：
+
+- 是否使用了临时文件。
+- 是否使用了优先队列。
+- 是original filesort algorithm（回表排序）还是modified filesort algorithm（不回表排序）。
+
 
 
 ## 事务
@@ -1113,6 +1135,7 @@ create index idx_user_name on user(name)
 ![image-20200419142155243](MySQL.assets/image-20200419142155243.png)
 
 ~~~sql
+-- 左连接
 select <select_list> from TableA A left join TableB B on A.Key=B.Key
 ~~~
 
@@ -1121,6 +1144,7 @@ select <select_list> from TableA A left join TableB B on A.Key=B.Key
 ![image-20200419142213272](MySQL.assets/image-20200419142213272.png)
 
 ~~~sql
+-- 右连接
 select <select_list> from TableA A right join TableB B on A.Key=B.Key
 ~~~
 
@@ -1129,6 +1153,7 @@ select <select_list> from TableA A right join TableB B on A.Key=B.Key
 ![image-20200419142303505](MySQL.assets/image-20200419142303505.png)
 
 ~~~sql
+-- 内连接
 select <select_list> from TableA A inner join TableB B on A.Key=B.Key
 ~~~
 
@@ -1153,6 +1178,7 @@ select <select_list> from TableA A right join TableB B on A.Key=B.Key where A.Ke
 ![image-20200419142516098](MySQL.assets/image-20200419142516098.png)
 
 ~~~sql
+-- 外连接 全连接
 select <select_list> from TableA A outer join TableB B on A.Key=B.Key 
 ~~~
 
@@ -1481,7 +1507,7 @@ explain select * from t_emp;
     - 从最好到最差排序
       - system > const > eq_ref > ref > range > index > ALL
     - system：表只有一行记录，这个是const类型的一个特例。
-    - const：表示通过一次索引就找到了。比如将主键放在where列表，一次就查到。（用索引，只用直接查一个）
+    - const：通过一次索引就找到了。比如将主键放在where列表，一次就查到。（用索引，只用直接查一个）
     - eq_ref ：唯一性索引扫描。对于每个索引键，表中只有一条记录与之匹配。常见于主键或唯一索引扫描。（用索引差了很多条记录，最后只匹配一个，一般是链表查询，相当于两个表员工和部门，只查唯一的一个员工）
     - ref ：非唯一性索引扫描。返回匹配某个单独值的所有行。本质也是一种索引访问，但是可能会找到很多符合条件的行（也可能只有一个匹配，但是也会扫描所有），所以属于查找和扫描的混合体。
     - range：扫描给定的范围，使用索引来选择行。一般是where列表出现between、<、>、in等的查询。这种也是比全表扫描要好，因为只需要开始于索引的某一点，而结束于另一点，不用扫描全部索引。
@@ -1710,7 +1736,7 @@ book的card连接class的card
   - 顺序要和索引顺序一致。
 - 如果不用索引，Filesort还有两种算法：
   - 双路排序：MySQL4.1之前使用的。要扫描两次磁盘。
-    - 从磁盘中读取行指针和orderby的列，对他们进行排序。然后扫描已经排好序的列表，按照列表中的值重新从表中读取对应的数据输出。
+    - 从磁盘中读取行指针和orderby的列，对他们进行排序。然后扫描已经排好序的列表，按照列表中的值重新从聚簇索引中读取对应的数据输出。
   - 单路排序：只取一次，利用缓冲区。
     - 从磁盘中读取查询需要的所有列和orderby的列，按照orderby的列在buffer中对他们进行排序，然后扫描排序后的列表进行输出。
 
