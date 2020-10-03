@@ -122,7 +122,7 @@ socket.accept()、socket.read()、socket.write()都时阻塞的
 - 面向缓冲区：数据通过通道写入或者读取缓冲区。可以创建非直接缓冲区和直接缓冲区（直接内存）。如果时使用直接缓冲区，会直接在物理内存中创建缓冲器（通过物理内存映射文件），jvm会尽量不去做用户空间和内核空间数据的拷贝，而是直接操作物理内存缓冲区。
   - 传递数据通过Channel和Buffer。用Channel连接双方，调用read或者write来在Buffer中读取或者写入数据。
 - 非阻塞
-  - 在网络IO中，对于调用OS来准备数据的阶段是非阻塞了，会立刻返回。在数据从内核（网卡）到用户内存拷贝的过程中时CPU操作。通过多路复用选择器减少线程切换的开销。
+  - 在网络IO中，对于调用OS来准备数据的阶段是非阻塞了，会立刻返回。在数据从内核（网卡）到用户内存拷贝的过程中时CPU操作。虽然不是阻塞的，但是方法返回时很多时候是没有可操作性的余地的，需要不断的轮训。通过配合多路复用选择器减少线程切换的开销。
 - 有Selecter
   - 利用多路复用（内核实现，可以单线程处理多个socket），来让一个线程处理多个channel。将channel注册到Selecter中，调用select方法，会阻塞直到某个注册的通道有事件就绪。
   - 用法：用channel的register方法把自己在selector中注册一个表示等待接收状态的事件（selector会根据状态是否满足而返回）。循环地调用selector地select()，会阻塞到有channel准备好。准备好了以后调用selector地selectedKeys()获取SelectionKey。可以用迭代器去遍历每个key，判断状态来处理调用不同地处理方法。如果有可接受状态，就通过注册的channel来调用accept()获取新的channel，然后把他注册到selector上，设置为读状态。等下次收到读状态完成的事件，就根据事件获取channel去做
@@ -333,6 +333,21 @@ Channel可以对buffer写入或者读取
 
 
 
+## Selector
+
+通过一个selector可以监视多个channel的状态，调用select可以阻塞直到有channel就绪了，可以将对应的channel返回（SelectionKey集合）。
+
+### channel的状态
+
+- connect：如果SocketChannel与一个ServerSocketChannel建立了连接，就是连接状态
+- accept：如果ServerSocketChannel接受了一个SocketChannel的请求，就是接受状态
+- read：如果SocketChannel有可读数据，就是可读状态
+- write：如果SocketChannel可以向其中写数据，就是可写状态
+
+
+
+在Selector上注册channel时，可以绑定一个感兴趣的状态，如果状态满足就会处于继续状态从select方法返回结果中作为一个SelectionKey实例返回。
+
 # 本地文件拷贝
 
 ## 不用缓冲区的流
@@ -343,7 +358,7 @@ Channel可以对buffer写入或者读取
 
 
 
-## NIO
+## NIO+缓冲
 
 
 
@@ -352,6 +367,145 @@ Channel可以对buffer写入或者读取
 ~~~
 
 
+
+## NIO+链接
+
+
+
+~~~java
+package com.qdw.io.nio;
+
+import java.io.*;
+import java.net.Socket;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+
+/**
+ * @PackageName:com.qdw.io.nio
+ * @ClassName: FileCopyDemo
+ * @Description:
+ * @date: 2020/9/8 0008 17:33
+ */
+interface FileCopyer{
+    void copyFile(File source,File target);
+}
+public class FileCopyDemo {
+    // 统一的关闭流方法
+    public static void close(Closeable closeable) {
+        if (closeable != null) {
+            try {
+                closeable.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    public static void main(String[] args) {
+        
+        // 流 不用缓冲区（非常慢）
+        FileCopyer noBufferStreamCopy = new FileCopyer() {
+            @Override
+            public void copyFile(File source, File target) {
+                InputStream fin = null;
+                OutputStream fout = null;
+                try {
+                    fin = new FileInputStream(source);
+                    fout = new FileOutputStream(source);
+                    int res;
+                    while((res=fin.read())!=-1) {
+                        fout.write(res);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    close(fin);
+                    close(fout);
+                }
+            }
+        };
+
+        // 流 用缓冲区
+        FileCopyer bufferedStreamCopy = new FileCopyer() {
+            @Override
+            public void copyFile(File source, File target) {
+                InputStream fin = null;
+                OutputStream fout = null;
+                try {
+                    fin = new BufferedInputStream(new FileInputStream(source));
+                    fout = new BufferedOutputStream(new FileOutputStream(target));
+                    byte[] buffer = new byte[1024];
+                    int res;
+                    // 先读到缓冲区
+                    while((res=fin.read(buffer))!=-1){
+                        // 从缓冲区中取数据写入
+                        fout.write(buffer,0,res);
+                    }
+                } catch (IOException e){
+                    e.printStackTrace();
+                } finally {
+                    close(fin);
+                    close(fout);
+                }
+            }
+        };
+
+        // nio 管道+缓冲
+        FileCopyer nioBufferCopy = new FileCopyer() {
+            @Override
+            public void copyFile(File source, File target) {
+                FileChannel fin = null;
+                FileChannel fout = null;
+                try {
+                    fin = new FileInputStream(source).getChannel();
+                    fout = new FileOutputStream(target).getChannel();
+                    // 创建一个字节缓存区
+                    ByteBuffer buffer = ByteBuffer.allocate(1024);
+                    // 输入到buffer中
+                    while(fin.read(buffer)!=-1){
+                        // 将position指针放到开始，转换为读模式
+                        buffer.flip();
+                        while (buffer.hasRemaining()){
+                            fout.write(buffer);
+                        }
+                        // 重置为写模式
+                        buffer.clear();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    close(fin);
+                    close(fout);
+                }
+            }
+        };
+        
+        // nio 管道+链接
+        FileCopyer nioTransferCopy = new FileCopyer() {
+            @Override
+            public void copyFile(File source, File target) {
+                FileChannel fin = null;
+                FileChannel fout = null;
+                try {
+                    fin = new FileOutputStream(source).getChannel();
+                    fout = new FileOutputStream(target).getChannel();
+                    long t = 0L;
+                    long size = fin.size();
+                    while (t!=size){
+                        t += fin.transferTo(0, size, fout);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    close(fin);
+                    close(fout);
+                }
+            }
+        };
+    }
+}
+
+~~~
 
 
 

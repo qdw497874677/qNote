@@ -16,6 +16,105 @@
 
 
 
+## Spring启动过程
+
+通过ClassPathXmlApplicationContext来创建一个Spring容器。
+
+ClassPathXmlApplicationContext通过多次继承才继承到ApplicationContext 接口
+
+**ApplicationContext实际上就是一个BeanFactory**
+
+回到ClassPathXmlApplicationContext，他里面有一个refresh方法（加锁的方法）来重新初始化ApplicationContext，第一次初始化也是从这开始。
+
+~~~java
+@Override
+	public void refresh() throws BeansException, IllegalStateException {
+		synchronized (this.startupShutdownMonitor) {
+			// Prepare this context for refreshing.
+			prepareRefresh();
+
+			// Tell the subclass to refresh the internal bean factory.
+			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+
+			// Prepare the bean factory for use in this context.
+			prepareBeanFactory(beanFactory);
+
+			try {
+				// Allows post-processing of the bean factory in context subclasses.
+				postProcessBeanFactory(beanFactory);
+
+				// Invoke factory processors registered as beans in the context.
+				invokeBeanFactoryPostProcessors(beanFactory);
+
+				// Register bean processors that intercept bean creation.
+				registerBeanPostProcessors(beanFactory);
+
+				// Initialize message source for this context.
+				initMessageSource();
+
+				// Initialize event multicaster for this context.
+				initApplicationEventMulticaster();
+
+				// Initialize other special beans in specific context subclasses.
+				onRefresh();
+
+				// Check for listener beans and register them.
+				registerListeners();
+
+				// Instantiate all remaining (non-lazy-init) singletons.
+				finishBeanFactoryInitialization(beanFactory);
+
+				// Last step: publish corresponding event.
+				finishRefresh();
+			}
+
+			catch (BeansException ex) {
+				if (logger.isWarnEnabled()) {
+					logger.warn("Exception encountered during context initialization - " +
+							"cancelling refresh attempt: " + ex);
+				}
+
+				// Destroy already created singletons to avoid dangling resources.
+				destroyBeans();
+
+				// Reset 'active' flag.
+				cancelRefresh(ex);
+
+				// Propagate exception to caller.
+				throw ex;
+			}
+
+			finally {
+				// Reset common introspection caches in Spring's core, since we
+				// might not ever need metadata for singleton beans anymore...
+				resetCommonCaches();
+			}
+		}
+	}
+~~~
+
+
+
+1. 准备工作：prepareRefresh()。记录容器启动时间，标记已启动状态，处理配置文件占位符等等。
+2. 加载配置。ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();配置的载体有xml文件、配置类、注解。将配置信息加载成BeanDefinition注册到容器容器中。还没有初始化。
+   1. 这个注册就是向容器中的一个map中添加键值对，key是beanName，value是BeanDefinition对象。还有一个map保存别名到beanName的映射。
+   2. 
+3. 注册和执行  **BeanFactory容器后处理器**  实例。在实例化单例之前执行的。开发者可以通过实现类拓展。
+   1. 注册：postProcessBeanFactory(beanFactory);
+      1. 通过BeanFactoryPostProcessor的实现类，开发者可以修改BeanDefinition对象等操作。
+      2. 这个接口的实现类怎么提供给spring呢。一个是可以将实现类通过xml配置bean的方式写到配置文件中。在容器启动时，会检查所有BeanDefinition信息，先将这个接口的实现类抽取出来，通过反射创建实例，执行接口方法。
+   2. 执行：invokeBeanFactoryPostProcessors(beanFactory);
+      1. 调用
+4. 注册 Bean后处理器  实例。registerBeanPostProcessors(beanFactory);bean后处理器的实例中有两个方法会在每个bean初始化的前后去执行。
+5. 国际化处理：initMessageSource();
+6. 初始化当前 ApplicationContext 的事件广播器：initApplicationEventMulticaster();
+7. 初始化一些特殊bean：onRefresh();在初始化单例bean之前。
+8. 注册事件监听器：registerListeners();监听器需要实现 ApplicationListener 接口
+9. 初始化所有单例bean：finishBeanFactoryInitialization(beanFactory);懒加载的除外。
+10. 广播事件，初始化完成：finishRefresh();
+
+
+
 ## AOP概念
 
 面向切面编程。
