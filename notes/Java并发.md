@@ -781,7 +781,11 @@ public class Test7 {
 
 ### synchronized
 
-synchronized是Java关键字，**解决多个线程之间访问资源的同步性**，可以保证被它修饰的方法或者代码块在**任意时刻只能有一个线程执行**。synchronized 代码块是由一对儿 monitorenter/monitorexit 指令实现的，**Monitor 对象是同步的基本实现单元**
+synchronized是Java关键字，**解决多个线程之间访问资源的同步性**，可以保证被它修饰的方法或者代码块在**任意时刻只能有一个线程执行**。synchronized 代码块使用一对儿 monitorenter/monitorexit 指令来获取和释放对象的Monitor，**Monitor 对象是同步的基本实现单元**
+
+
+
+
 
 Java早期版本中，synchronized主要靠操作系统内部的互斥锁，是一个无差别的重量级操作，属于重量级锁。Java6之后官方从JVM层面对synchronized进行了优化，提供了三种Monitor 实现。
 
@@ -834,7 +838,26 @@ java中每一个对象都可以作为锁。
 
 是C++写的。属性包括：重入次数、当前持有的线程、wait状态的线程列表、等待锁状态的线程列表等等
 
+##### 线程状态和状态转换
 
+多个线程同时请求某个对象监视器时，对象监视器会设置几种状态来区分请求的线程
+
+- 等待队列
+  - Contention List：所有请求锁的线程将首先放置到该竞争队列。
+    - 是一个后进先出队列。
+  - Entry List：Contention List中那些有资格成为候选人的线程被移到Entry List。
+    - 引入这个是为了降低对Contention List尾部的竞争。
+    - Owner线程会在unlock时从Contention List中迁移线程到Entry List，并且执行Entry List中一个线程为OnDeck线程，即就绪的线程。Owner线程释放锁后，把竞争锁的权利交给OnDeck线程。牺牲了公平性，提高了吞吐量。
+- 阻塞队列：
+  - Wait Set：放置调用wait方法被阻塞的线程（进入waiting状态）
+    - OnDeck线程获取锁之后成为Owner线程，当锁对象调用wait后，此线程释放锁，进入Wait Set。当锁对象调用notify/notifyAll，会唤醒Wait Set中的一个或者全部线程，进入Wait Set。
+- OnDeck：表示下一个能竞争到锁的线程。只能有一个。
+- Owner：获得锁的线程
+- !Owner：释放锁的线程
+
+##### 非公平的体现
+
+Owner线程释放锁后，队列中处于就绪状态的线程和此时还不在队列中正好也要竞争锁的线程，**都通过自旋锁CAS来竞争这个锁**。当不在队列线程竞争到了锁后，队列就绪线程就只能继续留在Entry List中作为OnDeck线程。这就不公平了。
 
 #### notify和notifyAll的区别
 
@@ -869,8 +892,8 @@ synchronized锁存在四种状态：无锁状态、偏向锁状态、轻量级�
 
 **使用场景**：只有一个线程进入临界区。比较理想的情况就是，一个线程消亡了之后，别的进程才来。
 
-1. 获取锁：当线程尝试进入同步代码后，用CAS设置对象头中的MarkWord中的锁标志，并把线程id记录在对象头中。这个锁就偏向了这个线程，当这个线程再次进入同步区时，比较线程id一致后就无需加锁直接进入。也就是说线程**执行完同步代码后，不会释放锁**。
-2. 撤销锁：如果其他线程尝试获取锁，发现线程id和对象头中的id不一致。此时检查之前偏向的线程还是否存活，如果不存活就将锁设置为无锁状态，重新偏向新的线程。如果存活，表示对象被多个线程竞争，升级成轻量级锁。
+1. 获取锁：当线程尝试进入同步代码后，用CAS设置对象头中的MarkWord中的锁标志为偏向模式，并把线程id记录在对象头中。这个锁就偏向了这个线程，当这个线程再次进入同步区时，比较线程id一致后就无需加锁直接进入。也就是说线程**执行完同步代码后，不会释放锁**。
+2. 撤销锁：如果其他线程尝试获取锁，发现线程id和对象头中的id不一致。此时检查之前偏向的线程还是否存活，如果不存活就将锁设置为无锁状态，重新偏向新的线程。如果存活，表示对象锁被多个线程竞争，退出偏向模式，升级成轻量级锁。
 
 ##### 轻量级锁（自旋锁）
 
@@ -878,7 +901,7 @@ synchronized锁存在四种状态：无锁状态、偏向锁状态、轻量级�
 
 主要的形式就是用CAS去尝试将锁标志的空闲状态改为锁定状态，如果成功了就将锁的持有者设置为自己。
 
-1. 获取锁：线程要获取锁，尝试用CAS将锁的对象头的锁标志从空闲修改锁定，如果成功，jvm就会在当前线程的栈帧中建立一个存放锁记录的空间，锁对象的Mark Word拷贝进去。然后对象头中的MarkWord替换为指向栈帧中锁记录的指针（这个线程就成了锁的持有者）。没有成功就自旋再次尝试修改
+1. 获取锁：线程进入同步区域，如果没有锁定，线程把锁对象的Mark Word拷贝到自己栈帧中新创建的锁记录空间里。然后用CAS对象头中的MarkWord替换为指向栈帧中锁记录的指针（这个线程就成了锁的持有者）。没有成功就自旋再次尝试修改
 2. 解锁：自旋重试多次后（默认10次），如果都失败了，说明对于同步代码是有竞争的，就升级为重量级锁，修改锁标记位。
 
 - 锁消除
@@ -892,6 +915,19 @@ synchronized锁存在四种状态：无锁状态、偏向锁状态、轻量级�
 ##### 重量级锁
 
 使用场景：多个线程同时进入临界区
+
+特点：不消耗CPU资源，但是会阻塞，阻塞会切换内核态，响应时间变慢。
+
+
+
+### synchronized和Lock的对比
+
+synchronized是java关键字，Lock是接口。Lock在类库层面实现同步，没有用到Synchronized，而是利用了volatile的可见性。都是可重用锁。
+
+- 释放锁方式：synchronized同步区域的代码执行完毕就会自动释放锁退出同步区域。而Lock需要手动执行获取锁释放锁的操作。
+- 等待可中断：获取synchronized锁的阻塞线程是不处理中断的。Lock中用tryLock(long time, TimeUnit unit)方法和lockInterruptibly()去尝试获取锁，在获取锁前是可以相应中断的。
+- 公平性：synchronized是非公平的。Lock的一个实现类ReentranLock默认是非公平的，也可以指定为公平锁。指定为公平锁性能会下降。
+- 精准唤醒：synchronized中调用锁的notify/notifyAll只能唤醒等待池中的一个或者所有线程。ReentranLock可以同时绑定多个Condition，Condition的await和signal只针对这个Condition。所以可以根据不同的Condition实例去await和signal，实现精准唤醒。
 
 
 
@@ -1329,7 +1365,7 @@ final boolean nonfairTryAcquire(int acquires) {
 
 
 
-## （待更新！！！）自定义同步组件
+## 自定义同步组件
 
 同步器的设计是基于模板方法的。使用者需要继承同步器并重写指定方法。之后将同步器组合在自定义的同步组件中，去调用同步器提供的模板方法，这些模板方法会调用使用者重写的方法。重写方法时，对同步状态的访问和修改要用同步器提供的三个方法：
 
@@ -1405,6 +1441,8 @@ public class Demo1 {
 ## （待更新！！！）CyclicBarrier
 
 循环栅栏。和倒计时器类似。让一组线层到达一个屏障（同步点）时被阻塞，直到最后一个线程到达时，屏障会被打开，这些阻塞的线程被唤醒。
+
+CountDownLatch只能用一次，而CyclicBarrier的计数器可用reset方法重置。
 
 满足数量要求，就执行代码
 
@@ -1898,6 +1936,14 @@ class MyThread implements Callable<Integer>{
 Runnable接口不会返回结果或抛出异常检查，Callable接口可以。
 
 工具类Executors可以实现两者实现类对象之间的像话转化。（Executors.callable（Runnable task）或 Executors.callable（Runnable task，Object resule））。
+
+
+
+### 线程方法
+
+- sleep：导致当前线程进入休眠状态。与对象的wait不同，sleep可以在任意区域调用，并且sleep不会释放锁，进入的是TIMED-WAITING状态。
+- yiled：使当前线程让出CPU时间片给优先级相同或更高的线程，回到RUNNABLE状态，重新竞争CPU时间片。
+- join：当前线程阻塞直到被调用join的线程运行终止。底层使用wait，也会释放锁。
 
 
 

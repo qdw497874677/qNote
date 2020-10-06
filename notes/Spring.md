@@ -14,6 +14,76 @@
 
 利用反射，通过类名等信息利用反射实例化对象
 
+### 依赖注入过程（待更新！！！）
+
+
+
+
+
+### BeanFactory、FactoryBean和ApplicationContext的区别
+
+- BeanFactory：是一个Bean工厂，使用简单工厂模式。是SpringIOC容器顶级接口。作用是管理Bean，包括实例化、定位、配置对象、建立依赖。
+- FactoryBean：是一个工厂Bean，使用工厂方法模式。作用是作为生产某种Bean的工厂，提供Bean的实例化的逻辑。这个接口由BeanFactory中配置的对象实现，这些对象实现了FactoryBean接口，就表示自己为生产某种Bean实例的工厂。
+- ApplicationContext：是BeanFactory的子接口，拓展了功能，如提供国际化，统一的资源文件读取方式，事件传播，应用层特别配置等。
+
+
+
+## Bean的作用域
+
+五种作用域
+
+| 作用域      | 描述                                                         |
+| ----------- | ------------------------------------------------------------ |
+| singleton   | 在spring IoC容器仅存在一个Bean实例，Bean以单例方式存在，bean作用域范围的默认值。 |
+| prototype   | 每次从容器中调用Bean时，都返回一个新的实例。即每次调用getBean()时，相当于执行newXxxBean()。 |
+| request     | 每次HTTP请求都会创建一个新的Bean。该作用域仅适用于web的Spring WebApplicationContext环境。 |
+| session     | 同一个HTTP Session共享一个Bean，不同Session使用不同的Bean。该作用域仅适用于web的Spring WebApplicationContext环境。 |
+| application | 限定一个Bean的作用域为`ServletContext`的生命周期。该作用域仅适用于web的Spring WebApplicationContext环境。 |
+
+
+
+## Bean的生命周期
+
+从创建Spring容器开始，到Spring容器销毁Bean
+
+- 实例化BeanFactoryPostProcessor实现类
+- 执行BeanFactoryPostProcessor的postProcessBeanFactory方法
+- 实例化BeanPostProcessor实现类
+- 实例化
+- 执行前置方法
+- 执行Bean的构造器
+- 执行前置方法
+- 为Bean注入属性
+- 设置Bean名字
+- 设置Bean工厂
+- 执行初始化前置方法
+
+## spring循环依赖
+
+什么是循环依赖：两个或两个以上的Bean互相持有对方，最终形成闭环。比如A中有B属性，B中有C属性，C中有A属性。
+
+### Spring怎么处理
+
+Spring的单例对象的初始化分为三步：
+
+1. createBeanInstance：实例化，就是调用对象的构造方法实例化对象
+2. populateBean：填充属性，主要是填充对其他bean的依赖
+3. initializeBean：调用spring xml中的init方法
+
+循环依赖主要发生在一、二中，也就是构造器循环依赖和field循环依赖。
+
+Spring为了解决单例的循环依赖问题使用了**三级缓存**：
+
+1. 三级缓存：singletonFactories：单例对象工厂的cache
+2. 二级缓存：earlySingletonObjects：提前曝光的单例对象的cache
+3. 一级缓存：singletonObjects：单例对象的cache
+
+从缓存中获取bean用getSingleton()，先从一级缓存然后二级然后三级。
+
+在一个bean A创建的第一步就把自己放到三级缓存中了，发现自己依赖B，从缓存中没找到创建B把B获取，B创建的时候把自己放入三级缓存，发现自己依赖A就去缓存中获取到不完整的A，然后B完成所有的初始化进入了一级缓存。A拿到了完整的B（B获取到了A的引用）
+
+所以Spring不能解决构造器的循环引用
+
 
 
 ## Spring启动过程
@@ -115,19 +185,11 @@ ClassPathXmlApplicationContext通过多次继承才继承到ApplicationContext �
 
 
 
-## AOP概念
+## AOP
 
 面向切面编程。
 
 在方法或者异常前后去做一些逻辑操作。这样可以把一些分散的组件从业务代码中提取出来，使这段代码可复用，并提高可拓展性。
-
-实现AOP分为两种：
-
-- 动态代理：Spring中用动态代理实现AOP
-  - 针对实现了接口的类用JDK默认的动态代理。（基于接口）
-  - CGLIB动态代理。（基于类）
-    - 
-- 静态织入（静态代理）：让编译器在编译期间，织入代码。
 
 应用场景：
 
@@ -135,6 +197,40 @@ ClassPathXmlApplicationContext通过多次继承才继承到ApplicationContext �
 - 权限控制
 - 缓存优化（第一次调用查数据库，第二次调用返回缓存中的数据）
 - 事务管理（方法前开启事务，调用完成后提交关闭事务）
+
+
+
+### 生成代理
+
+代理技术分为动态代理和静态织入，springaop是基于动态代理的
+
+- 动态代理：Spring中用动态代理实现AOP
+  - JDK动态代理：基于反射实现。针对实现了接口的类。
+    - 基本原理：代理类需要**实现InvocationHandler接口并且重写生成代理类中invoke**方法来编写方法的增强逻辑。代理类创建目标对象的方法中使用反射技术来生成相同接口的代理对象。当执行代理对象的增强方法时，会调到这个invoke来实现方法增强。
+  - CGLIB动态代理：基于继承的机制实现。不需要目标类实现接口
+    - 基本原理：代理类**实现MethodInterceptor 接口**，表示自己是一个方法拦截器。在创建代理对象的方法中使用Enhancer 对象来创建代理对象，设置对应的方法来解器，即设置自己。代理类**重写接口的intercept拦截方法**来实现目标方法的增强。
+- 静态织入（静态代理）：让编译器在编译期间，织入代码。
+
+### 增强方法的调用
+
+AOP的实现，关键的两步：
+
+- 得到代理对象
+- 利用递归责任链执行前后置通知即目标方法
+
+**代理对象方法 = 拦截器责任链 + 目标对象方法**
+
+对于CGLIB动态代理来说。
+
+当调用代理对象的增强方法时，对调用到代理类的intercept方法。
+
+intercept方法中创建拦截器链，如果拦截器链是空的就直接执行目标方法，否则执行一个CglibMethodInvocation实例的proceed方法来去执行增强的逻辑。
+
+**拦截器的调用流程**：对于After拦截器，每个拦截器的invoke方法中的**proceed去递归调用下一个拦截器**，直接**调用过所有的拦截后，返回调用目标方法**。在**递归返回的过程中**，**调用**拦截器invoke方法中proceed方法后面的增强通知方法，来实现增强。
+
+对于Before通知拦截器是先执行通知方法，再调用proceed，所以整个拦截器链的方法调用先是Before拦截器的增强方法，然后是After拦截器的增强方法。
+
+
 
 ### 使用
 
@@ -236,64 +332,6 @@ public static Object newProxyInstance(ClassLoader loader,
 - InvocationHandler h：调用处理器
 
 
-
-## spring循环依赖
-
-什么是循环依赖：两个或两个以上的Bean互相持有对方，最终形成闭环。比如A中有B属性，B中有C属性，C中有A属性。
-
-### Spring怎么处理
-
-Spring的单例对象的初始化分为三步：
-
-1. createBeanInstance：实例化，就是调用对象的构造方法实例化对象
-2. populateBean：填充属性，主要是填充对其他bean的依赖
-3. initializeBean：调用spring xml中的init方法
-
-循环依赖主要发生在一、二中，也就是构造器循环依赖和field循环依赖。
-
-Spring为了解决单例的循环依赖问题使用了**三级缓存**：
-
-1. 三级缓存：singletonFactories：单例对象工厂的cache
-2. 二级缓存：earlySingletonObjects：提前曝光的单例对象的cache
-3. 一级缓存：singletonObjects：单例对象的cache
-
-从缓存中获取bean用getSingleton()，先从一级缓存然后二级然后三级。
-
-在一个bean A创建的第一步就把自己放到三级缓存中了，发现自己依赖B，从缓存中没找到创建B把B获取，B创建的时候把自己放入三级缓存，发现自己依赖A就去缓存中获取到不完整的A，然后B完成所有的初始化进入了一级缓存。A拿到了完整的B（B获取到了A的引用）
-
-所以Spring不能解决构造器的循环引用
-
-
-
-## Bean的作用域
-
-五种作用域
-
-| 作用域      | 描述                                                         |
-| ----------- | ------------------------------------------------------------ |
-| singleton   | 在spring IoC容器仅存在一个Bean实例，Bean以单例方式存在，bean作用域范围的默认值。 |
-| prototype   | 每次从容器中调用Bean时，都返回一个新的实例，即每次调用getBean()时，相当于执行newXxxBean()。 |
-| request     | 每次HTTP请求都会创建一个新的Bean，该作用域仅适用于web的Spring WebApplicationContext环境。 |
-| session     | 同一个HTTP Session共享一个Bean，不同Session使用不同的Bean。该作用域仅适用于web的Spring WebApplicationContext环境。 |
-| application | 限定一个Bean的作用域为`ServletContext`的生命周期。该作用域仅适用于web的Spring WebApplicationContext环境。 |
-
-
-
-## Bean的生命周期
-
-从创建Spring容器开始，到Spring容器销毁Bean
-
-- 实例化BeanFactoryPostProcessor实现类
-- 执行BeanFactoryPostProcessor的postProcessBeanFactory方法
-- 实例化BeanPostProcessor实现类
-- 实例化
-- 执行前置方法
-- 执行Bean的构造器
-- 执行前置方法
-- 为Bean注入属性
-- 设置Bean名字
-- 设置Bean工厂
-- 执行初始化前置方法
 
 
 
