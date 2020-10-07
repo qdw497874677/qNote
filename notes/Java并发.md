@@ -372,6 +372,8 @@ public class SingletonDemo {
 >
 > 是乐观锁的一种实现方式。一般结合自旋。
 
+一般使用时会先读取变量获取期望值，然后调用unsafe类中的提供的比较赋值方法来尝试更新变量。
+
 ### 应用
 
 从原子类AtomicInteger里看CAS怎么发挥作用。
@@ -427,7 +429,9 @@ var5不断地变成最新值，如果比较成功了，就把var4加上。这个
 
 ### ABA问题
 
-> 线程T1在执行CAS操作中，如果主存中的值被线程T2从A变为B之后又变为A，T1的CAS操作是发现不到的，认为没有变化，实际上是被别的线程动过的。
+之前说的cas存在一个漏洞
+
+> 线程T1在执行CAS操作中，初次读取的时候是变量值是A，但是在准备检查赋值前，变量被别的线程操作从A变成B再变成A。T1的CAS操作没有发现变化，但实际上是被别的线程动过的。
 
 可以通过多加一个版本字段来实现
 
@@ -457,7 +461,7 @@ class User{
 
 #### 解决ABA
 
-用带时间戳的原子引用
+用带时间戳的原子引用AtomicStampedReference。但实际上大部分ABA问题不会影响程序并发的正确性，如果需要解决，用传统的互斥同步可能更高效。
 
 ~~~java
 public class Test3 {
@@ -797,7 +801,11 @@ Java早期版本中，synchronized主要靠操作系统内部的互斥锁，是�
 
 #### 非公平
 
-非 公 平 主 要 表 现 在 获 取 锁 的 行 为 上 ， 并 非 是 按 照 申 请 锁 的 时 间 前 后 给 等待 线 程 分 配 锁 的 ， 每 当 锁 被 释 放 后 ， 任 何 一 个 线 程 都 有 机 会 竞 争 到 锁 ，这 样 做 的 目 的 是 为 了 提 高 执 行 性 能 ， 缺 点 是 可 能 会 产 生 线 程 饥 饿 现 象 。
+当锁释放时，会给在阻塞队列中的就绪的线程CAS竞争锁的权利，同时不在队列中的线程也可以同时竞争锁，就可能会出现非队列里的线程提前获取到锁的情况，就造成了不公平的情况。牺牲了公平但是提高了执行效率。
+
+#### 可重用
+
+线程每次持有对象锁，就会把锁的计数器值加一，在退出同步区域时，锁计数器的值减1。当计数器值为1就会释放锁。
 
 #### 使用场景
 
@@ -882,11 +890,9 @@ notify()只会唤醒对象锁池中的随机一个线程，让他进入等待池
 
 #### 锁升级优化
 
-
-
 1.6之前synchronized的实现为重量级锁，涉及用户态和内核态的切换，为了减少资源的消耗，引入了锁升级。调用了不同的实现去获取锁，失败就去用更高级的实现，锁的重量级越来越大。
 
-synchronized锁存在四种状态：无锁状态、偏向锁状态、轻量级锁状态、重量级锁状态。他们随着竞争的激烈逐渐升级。**过程不可逆**。这种策略**为了提高获得锁和释放锁的效率**。
+synchronized锁存在四种状态：无锁状态、偏向锁状态、轻量级锁状态、重量级锁状态。他们**随着竞争的激烈逐渐升级**。**过程不可逆**。这种策略**为了提高获得锁和释放锁的效率**。
 
 ##### 偏向锁
 
@@ -1173,7 +1179,7 @@ class Data{
 
 AbstractQueuedSynchronizer，**抽象的队列同步器**，是一个抽象类，在java.util.concurrent.locks包下面。
 
-AQS是一个用来构建锁和同步器的框架，使用AQS能简单高效地个构造出应用广泛的大量的同步器。比如ReentrantLock，Semaphore，ReentrantReadWriteLock，SynchronousQueue，FutureTask，等等都是基于AQS的。
+AQS是一个用来构建锁和同步器的框架，使用AQS能简单高效地个构造出应用广泛的大量的同步器。同步器面向的是锁的实现者，它简化了锁的实现方式，屏蔽了同步状态管理，线程排队等底层操作。比如ReentrantLock，Semaphore，ReentrantReadWriteLock，SynchronousQueue，FutureTask，等等都是基于AQS的。
 
 AQS中维护了一个 **volatile int state** 和一个**FIFO队列**（Node节点）
 
@@ -1522,6 +1528,16 @@ semaphore.release();
 
 
 
+### 应用
+
+- 限流
+
+
+
+
+
+
+
 ## 阻塞队列
 
 > 首先是一个队列。
@@ -1700,6 +1716,20 @@ public class Test7 {
     }
 }
 ~~~
+
+
+
+### 实现类
+
+- ArrayBlockingQueue：基于数组的有界阻塞队列。默认不公平
+- LinkedBlockingQueue：基于链表的有界阻塞队列。
+- PriorityBlockingQueue：支持优先级排序的无界阻塞队列
+- DelayQueue：支持延时获取元素的无界阻塞队列
+- SynchronousQueue：不存储元素的阻塞队列，每一个put操作必须等待一个take。
+- LinkedTransferQueue：链表组成的无界阻塞队列，相比其他阻塞队列多了tryTransfer和transfer方法。可以把传入的元素直接传输给消费者
+- LinkedBlockingDeque：基于链表的双向阻塞队列。
+
+
 
 
 
@@ -2125,10 +2155,10 @@ ThreadPoolExecutor(int corePoolSize,
 ### 线程池状态
 
 - RUNNING：接受新任务并且处理阻塞队列里的任务。显示调用shutdown()；或者隐式调用finalize()，它里面调用了shutdown()
-- SHUTDOWN：拒绝新任务但是处理阻塞队列里的任务。
-- STOP：拒绝新任务并且抛弃阻塞队列里的任务，同时会中断正在处理的任务。显示调用shutdownNow()方法时，从RUNNING或者SHUTDOWN进入STOP
+- SHUTDOWN：拒绝新任务，但是处理阻塞队列里的任务。
+- STOP：拒绝新任务并且不再处理阻塞队列里的任务，同时会中断正在处理的任务。显示调用shutdownNow()方法时，从RUNNING或者SHUTDOWN进入STOP
 - TIDYING：所有任务都执行完（包括阻塞队列里的），当前线程池中活动线程为0。线程池和任务队列都为空时从SHUTDOWN 进入TIDYING。线程池为空时，从STOP进入TIDYING
-- TERMINATED（终止）：终止状态。调用terminated()进入
+- TERMINATED（终止）：终止状态。调用terminated()从TIDYING状态进入
 
 ### ctl
 
@@ -2328,6 +2358,26 @@ public void set(T value) {
     ThreadLocalMap getMap(Thread t) {
         return t.threadLocals;
     }
+
+public T get() {
+    Thread t = Thread.currentThread();
+    ThreadLocalMap map = getMap(t);
+    if (map != null) {
+        ThreadLocalMap.Entry e = map.getEntry(this);
+        if (e != null) {
+            @SuppressWarnings("unchecked")
+            T result = (T)e.value;
+            return result;
+        }
+    }
+    return setInitialValue();
+}
+
+public void remove() {
+    ThreadLocalMap m = getMap(Thread.currentThread());
+    if (m != null)
+        m.remove(this);
+}
 ~~~
 
 所以变量是放在当前线程对应的ThreadLocalMap中，并不是存在ThreadLocal中。ThreadLocal可以理解为是ThreadLocalMap的封装，用来传递变量值。
@@ -2360,9 +2410,27 @@ staticclass Entry extends WeakReference<ThreadLocal<?>> {
 
 
 
-### 案例
+#### 案例
 
 SimpleDateFormat产生的实例是单例，在多线程情况下会有线程安全问题。可以在ThreadLocal中去创建来解决线程安全问题。
+
+
+
+## 限流
+
+限流可以保护高并发系统。主要对并发访问进行限速。
+
+常见的限流方式和场景：
+
+- 限制总并发数：数据库连接池、线程池
+- 限制瞬时并发数：nginx的imit_conn模块
+- 限制时间窗口内的平均速率：Guava的RateLimiter
+- 等等
+
+两个基本限流算法
+
+- 漏桶算法：限制常量流入速率，即流出速率是一个固定常量。按照固定频率从队列中取。
+- 令牌桶算法：限制的是平均流入速率，允许突发请求。固定频率往令牌桶中添加令牌，每个请求需要获取令牌。
 
 
 
