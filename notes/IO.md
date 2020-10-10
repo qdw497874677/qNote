@@ -20,6 +20,27 @@
 
 
 
+### 使用
+
+读取文件
+
+~~~java
+Reader reader = new FileReader(filePath);
+BufferedReader bufferedReader = new BufferedReader(reader);
+StringBuffer bf = new StringBuffer();
+String str;
+while ((str = bufferedReader.readLine()) != null) {
+    bf.append(str + "\n");
+}
+bufferedReader.close();
+reader.close();
+System.out.println(bf.toString());
+~~~
+
+
+
+
+
 ## 字节流
 
 ![image-20200907235947908](IO.assets/image-20200907235947908.png)
@@ -63,6 +84,22 @@ socket是网络通信的端点
 - 为Socket绑定ip地址和端口
 - 从Socket实例中读取数据
 
+
+
+### 过程
+
+#### 建立通信链路
+
+客户端与服务器端通信，**客户端要创建一个Socket实例**，操作系统为这个Socket实例分配一个没有被使用过的本地端口号，并创建一个包含本地和远程地址和端口号的套接字数据结构。这个数据结构一直保存在系统中，直到这个连接关闭。在创建Socket市里的构造函数返回正确之前，要进行TCP的三次握手，握手完，Socket实例对象将创建完成，否则抛出IOException错误。
+
+服务端创建一个ServerSocket实例，ServerSocket创建只要指定的端口号没有被占用，一般实例创建就会成功。操作系统为ServerSocket实例创建一个底层数据结构，包含指定监听的端口号，和包含监听地址的通配符。当调用accept()方法时，将进入阻塞状态，等待客户端的请求。当一个新的请求到来时，将这个连接创建一个新的套接字数据结构，这个套接字的信息包含的地址和端口信息就是请求的。新创建的套接字的数据关联到ServerSocket的一个未完成的列表中（正在与客户端建立TCP连接），三次握手成功后，才返回Socket实例。
+
+#### 数据传输
+
+当连接建立成功，服务端和客户端都会有一个Socket实例，每个Socket实例都会有一个InputStream和OutputStream。网络I/O都是以字节流传输的。操作系统会为 InputStream 和 OutputStream 分别分配一定大小的缓冲区，数据的写入和读取都是通过这个缓存区完成的。写入端将数据写到 OutputStream 对应的 SendQ 队列中，当队列填满时，数据将被发送到另一端 InputStream 的 RecvQ 队列中，如果这时 RecvQ 已经满了，那么 OutputStream 的 write 方法将会阻塞直到 RecvQ 队列有足够的空间容纳 SendQ 发送的数据。值得特别注意的是，这个缓存区的大小以及写入端的速度和读取端的速度非常影响这个连接的数据传输效率，由于可能会发生阻塞，所以网络 I/O 与磁盘 I/O 在数据的写入和读取还要有一个协调的过程，如果两边同时传送数据时可能会产生死锁，在后面 NIO 部分将介绍避免这种情况。
+
+https://developer.ibm.com/zh/articles/j-lo-javaio/
+
 ## IO模型
 
 根据不同的操作对象，可以划分为磁盘IO、网络IO、数据库IO等等
@@ -79,7 +116,7 @@ socket是网络通信的端点
 
 
 
-## 同步异步阻塞非阻塞
+### 同步异步阻塞非阻塞
 
 - 同步异步：强调被调用方
   - 同步：被调用之后要把自己的任务做完，然后返回结果。
@@ -90,13 +127,13 @@ socket是网络通信的端点
 
 
 
-## Java中的IO模型
+### Java中的IO模型
 
 ![img](IO.assets/v2-f47206d5b5e64448744b85eaf568f92d_720w.jpg)
 
-### Blocking IO
+#### Blocking IO
 
-同步阻塞的IO模型，数据的读取阻塞在一个线程中，等待OS把数据准备好，然后把数据从内核空间拷贝到用户空间
+**同步阻塞的IO模型**，数据的读取阻塞在一个线程中，等待OS把数据准备好，然后把数据从内核空间拷贝到用户空间
 
 调用过程：
 
@@ -113,11 +150,11 @@ socket.accept()、socket.read()、socket.write()都时阻塞的
 - 线程本身占用较大内存
 - 线程切换的成本很高。切换时需要保存线程的上下文，然后执行系统调用。
 
-### New （Non-Blocking） IO
+#### New （Non-Blocking） IO
 
-同时支持阻塞和非阻塞模型。这里拿同步非阻塞IO模型来说明。同时NIO中的选择器可以使用多路复用来提高性能。
+同时支持阻塞和非阻塞模型。这里拿**同步非阻塞IO模型**来说明。同时NIO中的选择器可以使用多路复用来提高性能。
 
-#### 特点
+##### 特点
 
 - 面向缓冲区：数据通过通道写入或者读取缓冲区。可以创建非直接缓冲区和直接缓冲区（直接内存）。如果时使用直接缓冲区，会直接在物理内存中创建缓冲器（通过物理内存映射文件），jvm会尽量不去做用户空间和内核空间数据的拷贝，而是直接操作物理内存缓冲区。
   - 传递数据通过Channel和Buffer。用Channel连接双方，调用read或者write来在Buffer中读取或者写入数据。
@@ -129,27 +166,29 @@ socket.accept()、socket.read()、socket.write()都时阻塞的
 - 管道
   - 提供两个线程之间 的单向数据连接。pipe有一个source通道和sink通道，数据会被写到sink通道，从source通道读取。
 
-#### 多线程优化
+##### 多线程优化
 
 - 一个线程负责事件分发，返回事件来让别人处理
 - 使用cpu核心数的线程来处理IO，比如连接，读和写
 - 业务线程，处理IO前后的业务部分用单独的线程处理
 
-#### 适用场景
+##### 适用场景
 
 连接数目多，且连接比较短的场景。比如聊天服务器。
 
-### Asynchronous I/O
+#### Asynchronous I/O
 
-是异步非阻塞的IO模型。AIO是在数据准备好后，才会通知数据使用者
+是**异步非阻塞的IO模型**。AIO是在数据准备好后，才会通知数据使用者
 
 进程发起io操作后，就会直接返回。当io操作完成后，os会通知进程这个io已经完成了
 
-#### 适用场景
+是基于事件和回调机制实现的，线程操作后会直接返回，不会堵塞在那里，当后台处理完成，操作系统会通知响应的线程进行后续的操作。
+
+##### 适用场景
 
 适用于连接数目多，且连接比较长的场景，比如相册服务器
 
-### IO Multiplex
+#### IO Multiplex
 
 IO多路复用。
 

@@ -1473,7 +1473,7 @@ $netstat -ap | grep ssh
 
 
 
-# 看CPU占用高的进程
+# 看负载
 
 先top 找出占用最高的进程的PID
 

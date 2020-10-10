@@ -151,17 +151,20 @@ JMM认为如果提高线程安全，可以去保障下面三个性质。
 
 ### wait()
 
-在同步方法（不在的话会报非法监视器状态的异常）中调用锁对象的wait方法，会让发起调用的当前线程释放cpu和锁资源，变为等待状态进入锁对象的等待队列中，等待唤醒。**当线程唤醒后且获取到锁后，wait方法才会返回。**
+在同步方法（不在的话会报非法监视器状态的异常）中调用wait方法，会让**发起调用的当前线程**释放cpu和锁资源，变为等待状态进入锁对象的等待队列中，等待唤醒。**当线程被唤醒后，且获取到锁后，wait方法才会返回。**
 
 ### notify()、notifyAll()
 
-在同步方法中调用锁对象的notify()会让对象的等待队列中的随机一个线程进入同步队列，状态变为阻塞，来竞争锁。调用notify()是会唤醒等待队列中所有的线程，都进入到同步队列中去竞争锁。
+在同步方法中调用锁对象的notify()会让对象的等待队列中的随机一个线程**进入同步队列**，状态变为阻塞，来竞争锁。调用notify()是会唤醒等待队列中所有的线程，都进入到同步队列中去竞争锁。
 
-### join()
+### 线程方法
 
-如果线程A调用的线程B的join()方法，等待join()终止后，方法才会返回。
+- sleep：导致当前线程进入休眠状态。与对象的wait不同，sleep可以在任意区域调用，并且sleep不会释放锁，进入的是TIMED-WAITING状态。
+- yiled：使当前线程让出CPU时间片给优先级相同或更高的线程，回到RUNNABLE状态，重新竞争CPU时间片。
+- join：当前线程阻塞直到被调用join的线程运行终止。底层使用wait，也会释放锁。
+  - join方法是用synchronized同步的。A线程调用B线程的join：A获取了线程B对象锁，判断B处于运行状态后调用wait阻塞当前进入同步区域的线程。**由于线程终止时会调用自身的notifyAll()方法，唤醒所有等待线程对象锁的线程。**当B执行完终止后，唤醒处于等待状态的A线程。
 
-方法里的大概逻辑，就是对这个线程加锁，循环判断是否存活，如果还没终止就
+
 
 ### 等待池和锁池（等待队列、同步队列）
 
@@ -930,10 +933,10 @@ synchronized锁存在四种状态：无锁状态、偏向锁状态、轻量级�
 
 synchronized是java关键字，Lock是接口。Lock在类库层面实现同步，没有用到Synchronized，而是利用了volatile的可见性。都是可重用锁。
 
-- 释放锁方式：synchronized同步区域的代码执行完毕就会自动释放锁退出同步区域。而Lock需要手动执行获取锁释放锁的操作。
-- 等待可中断：获取synchronized锁的阻塞线程是不处理中断的。Lock中用tryLock(long time, TimeUnit unit)方法和lockInterruptibly()去尝试获取锁，在获取锁前是可以相应中断的。
-- 公平性：synchronized是非公平的。Lock的一个实现类ReentranLock默认是非公平的，也可以指定为公平锁。指定为公平锁性能会下降。
-- 精准唤醒：synchronized中调用锁的notify/notifyAll只能唤醒等待池中的一个或者所有线程。ReentranLock可以同时绑定多个Condition，Condition的await和signal只针对这个Condition。所以可以根据不同的Condition实例去await和signal，实现精准唤醒。
+- **释放锁方式**：synchronized同步区域的代码执行完毕就会自动释放锁退出同步区域。而Lock需要手动执行获取锁释放锁的操作。
+- **等待可中断**：获取synchronized锁的阻塞线程是不处理中断的。Lock中用tryLock(long time, TimeUnit unit)方法和lockInterruptibly()去尝试获取锁，在获取锁前是可以相应中断的。
+- **公平性**：synchronized是非公平的。Lock的一个实现类ReentranLock默认是非公平的，也可以指定为公平锁。指定为公平锁性能会下降。
+- **精准唤醒**：synchronized中调用锁的notify/notifyAll只能唤醒等待池中的一个或者所有线程。ReentranLock可以同时绑定多个Condition，Condition的await和signal只针对这个Condition。所以可以根据不同的Condition实例去await和signal，实现精准唤醒。
 
 
 
@@ -1966,14 +1969,6 @@ class MyThread implements Callable<Integer>{
 Runnable接口不会返回结果或抛出异常检查，Callable接口可以。
 
 工具类Executors可以实现两者实现类对象之间的像话转化。（Executors.callable（Runnable task）或 Executors.callable（Runnable task，Object resule））。
-
-
-
-### 线程方法
-
-- sleep：导致当前线程进入休眠状态。与对象的wait不同，sleep可以在任意区域调用，并且sleep不会释放锁，进入的是TIMED-WAITING状态。
-- yiled：使当前线程让出CPU时间片给优先级相同或更高的线程，回到RUNNABLE状态，重新竞争CPU时间片。
-- join：当前线程阻塞直到被调用join的线程运行终止。底层使用wait，也会释放锁。
 
 
 
