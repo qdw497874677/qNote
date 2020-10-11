@@ -1,6 +1,4 @@
-[
-
-[**	首页**](https://github.com/qdw497874677/myNotes/blob/master/首页检索.md)
+[**首页**](https://github.com/qdw497874677/myNotes/blob/master/首页检索.md)
 
 # SQL语句
 
@@ -251,6 +249,15 @@ if ( exist != NULL ) {
 
 
 ## SQL
+
+### 分类
+
+- DML：数据操纵语言。处理数据库中的数据内容
+  - select、insert、update、delete、call、merge、commit、rollback
+- DDL：数据定义语言。创建和定义数据库对象
+  - create、alter、drop、rename、truncate
+- DCL：数据控制语言。修改数据库结构的操作权限
+  - crant、revoke
 
 ### group by 和distinct对比
 
