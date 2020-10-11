@@ -250,6 +250,101 @@ mysql -u root -p
 
 
 
+## 远程访问
+
+## 1. docker拉取mysql镜像
+
+```shell
+docker pull mysql
+1
+```
+
+## 2.拉取完后运行mysql容器
+
+```shell
+docker run --name mysql -p 3305:3306 -e MYSQL_ROOT_PASSWORD=123 -d mysql
+1
+```
+
+解释下：
+
+```
+--name :后面是这个镜像的名称
+3307:3306：表示在这个容器中使用3307端口(第二个)映射到本机的端口号也为3306(第一个)
+-d :后台运行
+-e MYSQL_ROOT_PASSWORD=123：设置root初始密码
+1234
+```
+
+## 3.进入到mysql容器内部
+
+```shell
+docker exec -it mysql bash
+1
+```
+
+登录：
+
+```
+mysql -uroot -p123
+1
+```
+
+查看用户信息：
+
+```
+mysql> select host,user,plugin,authentication_string from mysql.user; 
++-----------+------------------+-----------------------+------------------------------------------------------------------------+
+| host      | user             | plugin                | authentication_string                                                  |
++-----------+------------------+-----------------------+------------------------------------------------------------------------+
+| %         | root             | caching_sha2_password | $A$005$HF7;krfwhkKHp5fPenQm4J2dm/RJtbbyjtCUVdDCcboXQw3ALxsif/sS1 |
+| localhost | mysql.infoschema | caching_sha2_password | $A$005$THISISACOMBINATIONOFINVALIDSALTANDPASSWORDTHATMUSTNEVERBRBEUSED |
+| localhost | mysql.session    | caching_sha2_password | $A$005$THISISACOMBINATIONOFINVALIDSALTANDPASSWORDTHATMUSTNEVERBRBEUSED |
+| localhost | mysql.sys        | caching_sha2_password | $A$005$THISISACOMBINATIONOFINVALIDSALTANDPASSWORDTHATMUSTNEVERBRBEUSED |
+| localhost | root             | mysql_native_password | *6BB4837EB74329105EE4568DDA7DC67ED2CA2AD9                              |
++-----------+------------------+-----------------------+------------------------------------------------------------------------+
+12345678910
+```
+
+备注：host为 % 表示不限制ip localhost表示本机使用 plugin非mysql_native_password 则需要修改密码
+
+修改加密方式：
+
+```
+ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY '123456';  ### 123456 mysql的登录密码
+flush privileges;
+12
+```
+
+在查看用户信息
+
+```
+mysql> select host,user,plugin,authentication_string from mysql.user;
++-----------+------------------+-----------------------+------------------------------------------------------------------------+
+| host      | user             | plugin                | authentication_string                                                  |
++-----------+------------------+-----------------------+------------------------------------------------------------------------+
+| %         | root             | mysql_native_password | *6BB4837EB74329105EE4568DDA7DC67ED2CA2AD9                              |
+| localhost | mysql.infoschema | caching_sha2_password | $A$005$THISISACOMBINATIONOFINVALIDSALTANDPASSWORDTHATMUSTNEVERBRBEUSED |
+| localhost | mysql.session    | caching_sha2_password | $A$005$THISISACOMBINATIONOFINVALIDSALTANDPASSWORDTHATMUSTNEVERBRBEUSED |
+| localhost | mysql.sys        | caching_sha2_password | $A$005$THISISACOMBINATIONOFINVALIDSALTANDPASSWORDTHATMUSTNEVERBRBEUSED |
+| localhost | root             | mysql_native_password | *6BB4837EB74329105EE4568DDA7DC67ED2CA2AD9                              |
++-----------+------------------+-----------------------+------------------------------------------------------------------------+
+5 rows in set (0.00 sec)
+1234567891011
+```
+
+刷新配置
+
+```
+flush privileges;
+```
+
+
+
+记得开放端口
+
+
+
 # 安装RabbitMQ
 
 下载镜像，这里我下载带web管理界面的
