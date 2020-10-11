@@ -357,6 +357,12 @@ service实现类或方法中加上@Transactional注解后，在service实现类�
 
 https://www.jianshu.com/p/7bd0cad17f23
 
+过滤器依赖于servlet容器，是基于函数回调
+
+拦截器不依赖servlet容器，是基于反射机制，是aop的一种应用。可以获取IOC容器中的bean，来调用业务逻辑
+
+
+
 # @Scheduled
 
 在Application启动类上添加@EnableScheduling注解开启定时
