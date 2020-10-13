@@ -190,6 +190,81 @@ start()开始一个线程后，线程就进入就绪状态，使线程所代表�
 
 Java的线程是不允许启动两次的，第二次调用必然会抛出IllegalThreadStateException，这是一种运行时异常，多次调用start被认为是编程错误。
 
+### 创建线程
+
+#### 继承Thread类
+
+重写
+
+#### 实现Runnable接口
+
+#### 实现Callable接口
+
+有返回值
+
+通过FutureTask类，传入Callable接口实现。FutureTask实现了Runnable接口，可以作为Thread的参数传入。（适配器模式）
+
+一个FutureTask只执行一次。
+
+~~~java
+public class Test7 {
+    public static void main(String[] args) throws InterruptedException, ExecutionException {
+        FutureTask<Integer> futureTask = new FutureTask<>(new MyThread());
+        Thread t1 = new Thread(futureTask,"T1");
+        t1.start();
+        //获取线程执行的结果，如果还没有完成就会阻塞，直到完成
+        System.out.println("result:"+futureTask.get());
+    }
+}
+class MyThread implements Callable<Integer>{
+    @Override
+    public Integer call() throws Exception {
+        System.out.println("call");
+        return 1024;
+    }
+}
+~~~
+
+
+
+#### 实现Runnable接口和Callable接口的区别
+
+Runnable接口不会返回结果或抛出异常检查，Callable接口可以。
+
+工具类Executors可以实现两者实现类对象之间的像话转化。（Executors.callable（Runnable task）或 Executors.callable（Runnable task，Object resule））。
+
+
+
+### 如何让线程运行10秒停下来
+
+让线程执行，在过程中处理中断。如果有sleep在catch中去处理中断。没有sleep可以在循环的某处通过当前线程对象的isInterrupted()来处理中断。主线程sleep10秒后对线程执行中断。
+
+~~~java
+public class Test4 {
+    public static void main(String[] args) {
+        Thread thread = new Thread(() -> {
+            for (int i = 0; i < 20; i++) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    System.out.println("被中断");
+                    return;
+                }
+                System.out.println(i);
+            }
+        });
+        thread.start();
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        thread.interrupt();
+    }
+}
+~~~
+
 
 
 ## volatile
@@ -1927,51 +2002,6 @@ public void run() {
 
 
 
-
-
-## 创建线程
-
-### 继承Thread类
-
-### 实现Runnable接口
-
-### 实现Callable接口
-
-有返回值
-
-通过FutureTask类，传入Callable接口实现。FutureTask实现了Runnable接口，可以作为Thread的参数传入。（适配器模式）
-
-一个FutureTask只执行一次。
-
-~~~java
-public class Test7 {
-    public static void main(String[] args) throws InterruptedException, ExecutionException {
-        FutureTask<Integer> futureTask = new FutureTask<>(new MyThread());
-        Thread t1 = new Thread(futureTask,"T1");
-        t1.start();
-        //获取线程执行的结果，如果还没有完成就会阻塞，直到完成
-        System.out.println("result:"+futureTask.get());
-    }
-}
-class MyThread implements Callable<Integer>{
-    @Override
-    public Integer call() throws Exception {
-        System.out.println("call");
-        return 1024;
-    }
-}
-~~~
-
-
-
-### 实现Runnable接口和Callable接口的区别
-
-Runnable接口不会返回结果或抛出异常检查，Callable接口可以。
-
-工具类Executors可以实现两者实现类对象之间的像话转化。（Executors.callable（Runnable task）或 Executors.callable（Runnable task，Object resule））。
-
-
-
 ## 线程池
 
 > 主要工作是控制运行的线程的数量，处理过程中将任务放入队列，然后在线程创建后启动这些任务。如果线程数量超过最大数量+队列里排队的数量，就要等其他线程执行完毕，再从队列中取出任务来执行。
@@ -1980,9 +2010,9 @@ Runnable接口不会返回结果或抛出异常检查，Callable接口可以。
 
 通过池化技术的思想减少每次获取资源的消耗。
 
-- 降低资源消耗。通过重复利用已创建的线程，降低线程创建和销毁造成的消耗。
-- 提高响应速度。当任务到达时，不需要等待线程创建就能立刻执行。
-- 提高线程的可管理性。可以进行线程的统一分配，调优和监控。
+- **降低资源消耗**。通过重复利用已创建的线程，降低线程创建和销毁造成的消耗。
+- **提高响应速度**。当任务到达时，不需要等待线程创建就能立刻执行。
+- **提高线程的可管理性**。可以进行线程的统一分配，调优和监控。
 
 线程池可以预先创建若干数量的线程，不能由用户直接对线程进行控制，在这个前提下，**可以通过线程的复用来减少开销。**也可以平缓过量任务。
 
@@ -2237,17 +2267,84 @@ ThreadPoolExecutor(int corePoolSize,
 
 通过扩展线程池进行监控。可以通过继承线程池来自定义线程池，重写线程池的beforeExecute、afterExecute和terminated方法，也可以在任务执行前、执行后和线程池关闭前执行一些代码来进行监控。例如，监控任务的平均执行时间、最大执行时间和最小执行时间等。
 
+### 任务调度
+
+任务调度是线程池的主要入口。执行过程如下：
+
+1. 检测线程池运行状态，如果不是RUNNING，则直接拒绝，线程池要保证在RUNNING的状态下执行任务。
+2. 如果workerCount < corePoolSize，则创建并启动一个线程来执行新提交的任务
+3. 如果workerCount >= corePoolSize，且线程池内的阻塞队列未满，则将任务添加到阻塞队列中。
+4. 如果workerCount >= corePoolSize 且 workerCount < maximumPoolSize 且阻塞队列未满，则创建一个线程来执行新提交的任务。
+5. 如果workerCount >= maximumPoolSize，并阻塞队列满了，就根据拒绝策略来处理任务。
+
+
+
+### 任务缓冲
+
+任务缓冲模块是线程能够管理任务的核心部分。线程池的本质就是对任务和线程的管理，其中关键思想就是将任务和线程解耦，才能进行后续的分配工作。线程池中通过生产者消费者模式，和阻塞队列来实现。**阻塞队列缓存任务，工作线程从阻塞队列中获取任务。**
+
+使用不同的阻塞队列可以实现不同的任务存区策略。
+
+![img](Java并发.assets/725a3db5114d95675f2098c12dc331c3316963.png)
+
+### 任务申请
+
+任务的执行有两种，一种是任务直接由新创建的线程执行，另一种是任务从任务队列中获取然后执行。执行完任务的空闲线程会再次从队列中申请任务再去执行。
+
+getTask方法让线程从任务模块中不断地取任务执行。流程为：
+
+![图6 获取任务流程图](Java并发.assets/49d8041f8480aba5ef59079fcc7143b996706.png)
+
+getTask进行多次判断，是为了控制线程的数量，符合线程池的状态。如果线程池不应该有那么多线程，就会返回null。工作线程Worker会不断地接收新任务去执行，而当工作线程Worker接收不到任务时，就会开始被回收。
+
+### 任务拒绝
+
+任务拒绝模块是线程池的保护部分，线程池有一个最大的容量，当线程池任务缓存队列已满，并且线程数量达到最大线程数，就需要拒绝掉任务。
+
+拒绝策略是一个接口，可以实现接口定制拒绝策略，JDK提供了四种已有的拒绝策略。
+
+- ThreadPoolExecutor.AbortPolicy：丢弃任务并抛出RegectEdExecutionException异常。是线程池的默认拒绝策略。可以己时反馈状态，如果是比较关键的业务，推荐使用，可以及时发现问题。
+- ThreadPoolExecutor.DiscardPolicy：直接丢弃任务。无法发现异常，无关紧要的任务可以用。
+- ThreadPoolExecutor.DiscardOldestPolicy：丢弃队列最前面的任务，然后重新提交拒绝的任务。需要根据业务去判断丢弃老任务是否合适。
+- ThreadPoolExecutor.CallerRunsPolicy：让调用的线程处理任务。这种情况是需要让所有任务执行完毕，适合大量计算的任务类型，使用对线程是为了最大化吞吐量，必须让每个任务执行完。
+
+
+
+### Worker线程
 
 
 
 
-### 如何配置
+
+### 业务实践
+
+
+
+
+
+### 如何配置参数
+
+#### 公式
 
 首先知道机器的配置，有多少核，支持多少线程。
 
 - CPU密集型：任务需要大量的运算，没有阻塞，CPU全速运行。
 - IO密集型：任务线程并不是一直在执行任务，则应该配置尽量多的线程数，比如CPU核数*2。
   - 还可以参考一个公式：CPU核数/（1-阻塞系数）。阻塞系数一般在0.8-0.9之间。
+
+#### 动态调整
+
+将线程池的参数从代码迁移到分布式配置中心上，**实现线程池参数可以动态配置和即时生效。**
+
+动态化线程池的核心设计包括三个方面：
+
+- 简化线程池配置：核心的就三个参数：corePollSize、maximumPoolSize、workQueue。实际应用中并发场景主要两种：
+  - 并行执行子任务，提高响应速度。使用同步队列，不存储元素。
+  - 并行执行大批次任务，提升吞吐量。使用有界队列，设置容量，防止堆积。
+- 参数可动态修改：
+- 增加线程池监控：
+
+
 
 ### 一些小的知识点
 

@@ -1444,11 +1444,17 @@ sar（System Activity Reporter系统活动情况报告）是目前 Linux 上最�
 
 
 
-# 看日志
+# 常用命令
+
+
+
+## 看日志
 
 搜索日志
 
-cat -n filename | grep "关键字"
+~~~shell
+cat -n filename | grep -A 10 -B 10 "关键字"
+~~~
 
 实时监控100行日志
 
@@ -1462,20 +1468,44 @@ cat -n filename | grep "关键字"
 tail  -n  10  test.log
 ~~~
 
-# 看端口
+## 看端口
 
 
 
 ~~~shell
 #找出程序运行的端口
 $netstat -ap | grep ssh
+$netstat -ap | grep 8080
 ~~~
 
 
 
-# 看负载
+## 看负载
+
+### top
+
+展示服务器的CPU和内存使用情况
+
+前几行:
+
+- Tasks：展示进程数量和状态
+- Cpu：展示CPU状态，
+  - us：用户进程占用
+  - sy：内核进程占用
+  - id：空闲cpu
+  - wa：等待io占用的cpu
+- Mem：展示内存状态
+- Swap：展示内存状态
+
+按1展示单个cpu的信息。按shift+c，进程按CPU使用率从大到小。按shift+p，进程按内存使用率从大到小。
+
+
 
 先top 找出占用最高的进程的PID
 
 通过　top -H -p PID　查看这个进程
+
+### iostat
+
+展示IO开销
 
