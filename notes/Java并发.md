@@ -2171,7 +2171,7 @@ ThreadPoolExecutor(int corePoolSize,
 
 - int corePoolSize：核心线程数。当线程池中的线程数量达到核心线程数后，会吧之后到达的任务放到阻塞队列中。
 - int maximumPoolSize：线程池能同时容纳的最大线程数。
-- long keepAliveTime：空闲线程的存活时间。当线程池中线程的数量超过核心线程数后，**多余线程的空闲时间达到这个存活时间时**，就销毁空闲线程**直到剩下核心数量**的线程。
+- long keepAliveTime：超过核心线程数的线程空闲存活的时间。当线程池中线程的数量超过核心线程数后，**多余线程的空闲时间达到这个存活时间时**，就销毁空闲线程**直到剩下核心数量**的线程。
 - TimeUnit unit：存活时间的单位。
 - BlockingQueue<Runnable> workQueue：任务队列。是阻塞队列，元素是Runnable实现类，相当于要创建线程的任务。如果队列满了，又有任务来，且线程数量没有到最大线程数。这时要创建非核心线程并且立刻执行这个新来的任务。
 - ThreadFactory threadFactory：线程工厂。
