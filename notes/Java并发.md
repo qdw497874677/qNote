@@ -147,6 +147,10 @@ JMM认为如果提高线程安全，可以去保障下面三个性质。
 
 ![image-20200520203710979](Java并发.assets/image-20200520203710979.png)
 
+![img](https://images2015.cnblogs.com/blog/721070/201704/721070-20170421155802696-1378852793.png)
+
+
+
 
 
 ### wait()
@@ -159,10 +163,18 @@ JMM认为如果提高线程安全，可以去保障下面三个性质。
 
 ### 线程方法
 
-- sleep：导致当前线程进入休眠状态。与对象的wait不同，sleep可以在任意区域调用，并且sleep不会释放锁，进入的是TIMED-WAITING状态。
-- yiled：使当前线程让出CPU时间片给优先级相同或更高的线程，回到RUNNABLE状态，重新竞争CPU时间片。
-- join：当前线程阻塞直到被调用join的线程运行终止。底层使用wait，也会释放锁。
-  - join方法是用synchronized同步的。A线程调用B线程的join：A获取了线程B对象锁，判断B处于运行状态后调用wait阻塞当前进入同步区域的线程。**由于线程终止时会调用自身的notifyAll()方法，唤醒所有等待线程对象锁的线程。**当B执行完终止后，唤醒处于等待状态的A线程。
+- sleep：当前线程进入休眠，**交出CPU，但是不释放锁**。sleep可以在任意区域调用，进入的是TIMED-WAITING状态。
+- yiled：使当前线程让出CPU，给优先级相同或更高的线程，回到RUNNABLE状态，重新竞争CPU时间片。和sleep类似**不会释放锁**。
+- join：当前线程阻塞直到被调用join的线程运行终止。**底层使用wait，也会释放锁**。
+  - join方法是用synchronized以目标线程作为锁对象。A线程调用B线程的join：A进入同步状态**以线程B作为锁对象**，判断B处于运行状态后**调用wait**阻塞当前进入同步区域的线程。**由于线程终止时会调用自己的notifyAll()方法，唤醒所有以自己为锁的在等待的线程。**当B执行完终止后，唤醒处于等待状态的A线程。
+- interrupt()：设置线程的中断标志位。要看线程去怎么处理中断标志。
+  - 如果线程通过sleep、wait、join处于等待状态，那么线程会定期检查中断位是否为true，会在这些方法中抛出IntrruptedException异常，并在抛出异常后重置中断位为false。
+  - 如果线程正在运行竞争synchronized、执行lock()，那么是不可中断的，他们会暂时忽略，知道成功获取资源后再去把中断补回来
+  - 判断中断标志的三种方式：
+    - isInterrupted()：不会重置
+    - interrupted()：会重置
+    - throw InterruptException：抛出异常同时重置。
+- suspend()/resume()：suspend会挂起线程，直到被resume。调用suspend和调用resume的线程，可能会因为挣锁的问题发生锁死。所有JDK7已经弃用。
 
 
 
@@ -1490,6 +1502,10 @@ final boolean acquireQueued(final Node node, int arg) {
    1. 拿到前驱节点去判断，如果前驱是头结点（头结点获取了资源），那么作为老二就是去用tyAcquire去尝试获取资源。获取到后将head指向自己表示为头结点，把之前拿到的前驱节点引用p置为null，帮助gc。
    2. 如果不是老二，或者没有获取到资源就表示自己可以先休息了，通过后方法内的park()方法进入等待状态，这个方法可以将哪些被中断的等待线程唤醒后发现拿不到资源继续park()等待。通过shouldParkAfterFailedAcquire()进入等待状态，配合parkAndCheckInterrupt()方法来标记是否有被中断。
    3. 最后都要执行，也就是在finally中判断是否拿到资源，然后调用cancelAcquire()来取消节点在队列中的等待。
+
+##### shouldParkAfterFailedAcquire()
+
+用来检查状态，看看自己是不是真的可以进入waiting状态了。
 
 
 
