@@ -1206,7 +1206,7 @@ public class LazyMan {
 
     2. 用lockInterruptibly()去尝试获取锁，优先响应中断再响应所获取（就是说如果在获取锁的过程中进入阻塞，对他发起的中断它可以响应到，Thread.interrupt()可以发起中断。）。
 - synchronized是非公平锁；Lock两者都可，默认是非公平锁，传入参数true就为公平锁。
-- synchronized唤醒线程要么随机唤醒一个线程。要么唤醒全部线程；Lock可以通过绑定多个Condition（对象监视器）来实现分组唤醒需要唤醒的线程，可以精准唤醒。
+- synchronized唤醒线程要么随机唤醒一个线程。要么唤醒全部线程；Lock可以通过把线程绑定到多个Condition中来实现分组唤醒需要唤醒的线程，可以精准唤醒。
 
 ### Lock精准唤醒
 
@@ -1283,11 +1283,13 @@ AbstractQueuedSynchronizer，**抽象的队列同步器**，是一个抽象类�
 
 AQS是一个用来构建锁和同步器的框架，使用AQS能简单高效地个构造出应用广泛的大量的同步器。同步器面向的是锁的实现者，它简化了锁的实现方式，屏蔽了同步状态管理，线程排队等底层操作。比如ReentrantLock，Semaphore，ReentrantReadWriteLock，SynchronousQueue，FutureTask，等等都是基于AQS的。
 
+AQS是提供一些基础模板方法，模板方法中的有些小方法是需要开发者去实现的。比如说提供过acquire获取资源实现、acquireQueued进入同步队列实现、release释放资源实现等，而获取独占资源的tryAcquire需要开发者去自己实现，这些需要实现的方法会被框架中的模板方法调用，比如tryAcquire会被acquireQueued调用，acquire也会调用tryAcquire。
+
 AQS中维护了一个 **volatile int state** 和一个**FIFO队列**（Node节点）
 
 state：代表同步状态，volatile保证多线程下的可见性，=1表示当前对象已经被占用，其他线程来加锁时则会失败。
 
-FIFO：多线程争用资源被阻塞时会进入这个队列。加锁失败的线程会被放入一个FIFO的等待队列中。
+FIFO：多线程争用资源的线程会封装成node进入这个队列，队列后面的等待队首的释放资源。
 
 > 核心思想
 
@@ -1341,7 +1343,9 @@ waitStatus的状态包括：
 
 因为多线程竞争的原因，CLH队列插入节点和设置节点都采用CAS+自旋的方式来完成。
 
+#### 等待队列
 
+和一个Condition对象绑定。一个Condition对象去调用await方法，当前线程进入这个condition的等待队列中，然后释放锁。一个Condition对象去调用signal方法，会将对待队列里面的第一个waiter转移到同步队列。
 
 #### 独占模式
 
@@ -1360,6 +1364,136 @@ waitStatus的状态包括：
   - 执行tryAcquireShared(arg)，返回一个int表示资源数量。如果还有资源尝试唤醒队列中下一个线程。tryAcquireShared(arg)需要实现
 - releaseShared(int arg)
   - 执行tryReleaseShared(arg)，返回true表示还有资源剩余，唤醒队列第一个线程。tryReleaseShared(arg)需要实现。
+
+
+
+#### 关键方法
+
+##### acquire()
+
+是独占模式下，获取共享资源的顶级入口。如果获取到资源直接返回，否则进入同步队列直到获得资源为止，获取到资源前的过程中是忽略中断的。这个也是可重用锁的lock方法，lock方法中就是一个acquire(1)
+
+~~~java
+public final void acquire(int arg) {
+        if (!tryAcquire(arg) &&
+            acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+            selfInterrupt();
+    }
+~~~
+
+函数流程：
+
+1. tryAcquire(arg)方法尝试去获取资源
+2. addWaiter()方法将线程加入同步队列尾部，标记为独占模式
+3. acquireQueued()使线程阻塞在等待队列中获取资源，一直等待获取到后才返回。当返回时如果在等待期间被中断过就返回true，否则返回false。
+4. 对于在队列中阻塞过程发生的中断，会在获取资源后通过selfInterrupt()方法自我中断，补上。
+
+##### tryAcquire()
+
+这个方法是空的，只返回异常，需要由子类去重写。
+
+~~~java
+protected boolean tryAcquire(int arg) {
+        throw new UnsupportedOperationException();
+    }
+~~~
+
+之所以不是直接用抽象方法定义，是因为在独占和共享模式下，都需要两者都实现（一般是在一个自定义同步器内定义内部类来继承AQS来实现需要的方法），这样减少了开发量。
+
+
+
+##### addWaiter()
+
+将当前线程加入等待队列的尾部，返回当前线程所在的节点。
+
+~~~java
+private Node addWaiter(Node mode) {
+        Node node = new Node(Thread.currentThread(), mode);
+        // Try the fast path of enq; backup to full enq on failure
+        Node pred = tail;
+        if (pred != null) {
+            node.prev = pred;
+            if (compareAndSetTail(pred, node)) {
+                pred.next = node;
+                return node;
+            }
+        }
+        enq(node);
+        return node;
+    }
+~~~
+
+流程：
+
+1. 根据模式为当前线程构造节点，有独占和共享模式
+2. 尝试用CAS快速入队
+3. 失败后通过end方法入队
+
+##### end()
+
+将node加入队尾
+
+~~~java
+private Node enq(final Node node) {
+        for (;;) {
+            Node t = tail;
+            if (t == null) { // Must initialize
+                if (compareAndSetHead(new Node()))
+                    tail = head;
+            } else {
+                node.prev = t;
+                if (compareAndSetTail(t, node)) {
+                    t.next = node;
+                    return t;
+                }
+            }
+        }
+    }
+~~~
+
+自旋的尝试CAS加入队尾。
+
+
+
+##### acquireQueued()
+
+前面tryAcquire失败了，执行完addWaiter后，线程已经被放到队列尾部了。接下来acquireQueued就要让线程进入等待状态休息，直到其他线程释放资源后唤醒自己。
+
+~~~java
+final boolean acquireQueued(final Node node, int arg) {
+        boolean failed = true;
+        try {
+            boolean interrupted = false;
+            for (;;) {
+                final Node p = node.predecessor();
+                if (p == head && tryAcquire(arg)) {
+                    setHead(node);
+                    p.next = null; // help GC
+                    failed = false;
+                    return interrupted;
+                }
+                if (shouldParkAfterFailedAcquire(p, node) &&
+                    parkAndCheckInterrupt())
+                    interrupted = true;
+            }
+        } finally {
+            if (failed)
+                cancelAcquire(node);
+        }
+    }
+~~~
+
+流程：
+
+1. 标记是否拿到资源，标记等待过程是否被中断过
+2. 开始自旋操作
+   1. 拿到前驱节点去判断，如果前驱是头结点（头结点获取了资源），那么作为老二就是去用tyAcquire去尝试获取资源。获取到后将head指向自己表示为头结点，把之前拿到的前驱节点引用p置为null，帮助gc。
+   2. 如果不是老二，或者没有获取到资源就表示自己可以先休息了，通过后方法内的park()方法进入等待状态，这个方法可以将哪些被中断的等待线程唤醒后发现拿不到资源继续park()等待。通过shouldParkAfterFailedAcquire()进入等待状态，配合parkAndCheckInterrupt()方法来标记是否有被中断。
+   3. 最后都要执行，也就是在finally中判断是否拿到资源，然后调用cancelAcquire()来取消节点在队列中的等待。
+
+
+
+
 
 
 
@@ -1475,7 +1609,7 @@ final boolean nonfairTryAcquire(int acquires) {
 
 ## 自定义同步组件
 
-同步器的设计是基于模板方法的。使用者需要继承同步器并重写指定方法。之后将同步器组合在自定义的同步组件中，去调用同步器提供的模板方法，这些模板方法会调用使用者重写的方法。重写方法时，对同步状态的访问和修改要用同步器提供的三个方法：
+同步器的设计是基于模板方法的。使用者需要继承同步器并重写指定方法。之后将同步器组合在自定义的同步组件中，去调用同步器提供的模板方法，这些模板方法会调用使用者重写的方法。重写方法时，对**同步状态的访问和修改要用同步器提供的三个方法**：
 
 - getState()：获取当前同步状态
 - setState(int newState)：设置当前同步状态
@@ -1497,7 +1631,7 @@ final boolean nonfairTryAcquire(int acquires) {
 
 使用方法的前置条件，用Lock.lock()获取锁，调用Lock.newCondition()获取Condition对象
 
-当调用await()或，当前线程会释放锁，并在此等待，而其他线程调用Condition对象的signal()方法后，通知当前线程，当前线程才从await()方法返回，并且在返回前已经获取了锁。
+当调用Condition对象的await()后，当前线程会进入condition的阻塞队列，然后释放锁，而其他线程调用Condition对象的signal()方法后，阻塞队列头部的线程加入同步队列，去竞争锁，从await()方法返回时，就已经获取了锁。
 
 
 
@@ -2395,13 +2529,19 @@ runWorker方法的执行过程为：
 
 ### 如何配置参数
 
-#### 公式
+#### 经验
 
 首先知道机器的配置，有多少核，支持多少线程。
 
-- CPU密集型：任务需要大量的运算，没有阻塞，CPU全速运行。
+- CPU密集型：任务需要大量的运算，没有阻塞，CPU全速运行。这种情况把线程数量保持在cpu数量就好了
 - IO密集型：任务线程并不是一直在执行任务，则应该配置尽量多的线程数，比如CPU核数*2。
   - 还可以参考一个公式：CPU核数/（1-阻塞系数）。阻塞系数一般在0.8-0.9之间。
+
+
+
+
+
+
 
 #### 动态调整
 
