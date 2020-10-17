@@ -60,6 +60,36 @@ Inversion of Control。控制翻转。是一种思想。将组件的创建和协
 - 设置Bean工厂
 - 执行初始化前置方法
 
+
+
+## SpringMVC单例Bean线程安全怎么解决
+
+- 使用ThreadLocal，ThreadLocal会为每一个线程提供一个独立的变量副本，这样在多线程对数据访问就不会出现冲突。因为每一个线程都拥有自己的变量副本，因此也就不需要同步该变量。ThreadLocal提供了线程安全的共享对象，在编写多线程代码时，可以把不安全的变量封装进ThreadLocal。
+- 如果时web应用，可以使用Spring Bean的作用域中的request,在controller类前面加上@Scope("****")，表明每次请求都会生成一个新的Bean对象。这样也能起到线程安全的作用。
+- 把会产生线程安全的操作用同步锁包裹，多线程并发量大的时候会对性能有一定的影响。
+
+
+
+## 单例Bean的优势
+
+由于不会每次都新创建新对象所以有一下几个性能上的优势：
+
+1. 减少了新生成实例的消耗
+
+新生成实例消耗包括两方面，第一，spring会通过反射或者cglib来生成bean实例这都是耗性能的操作，其次给对象分配内存也会涉及复杂算法。
+
+2. 减少jvm垃圾回收
+
+由于不会给每个请求都新生成bean实例，所以自然回收的对象少了。
+
+3. 可以快速获取到bean
+
+因为单例的获取bean操作除了第一次生成之外其余的都是从缓存里获取的所以很快。
+
+劣势：不能做到线程安全。
+
+
+
 ## spring循环依赖
 
 什么是循环依赖：两个或两个以上的Bean互相持有对方，最终形成闭环。比如A中有B属性，B中有C属性，C中有A属性。
@@ -337,9 +367,25 @@ public static Object newProxyInstance(ClassLoader loader,
 
 
 
-## Spring事务
+## Spring对事务的支持
 
-service实现类或方法中加上@Transactional注解后，在service实现类在被调用时注入的就是service的代理对象
+spring支持两种方式的事务管理
+
+- 编程式事务管理
+- 声明式事务管理：推荐使用。通过AOP实现。最常用使用@Transactional的全注解方式
+
+在service中的一个方法上添加@Transactional注解，拦截的这个方法内抛出了指定异常后，事务会自动回滚。（如果方法内捕捉了，注解就捕获不到了，就不会自动回滚）
+
+默认下只会处理。Error和RuntimeException及其子类的UNChecked异常。一般的Exception这些Checked异常不会发生回滚。
+
+## 事务的传播属性
+
+Spring定义了7中传播行为。主要就是当一个事务方法去调用另一个事务方法，处理这些事务之间的关系。
+
+两个常用的。
+
+- 默认是REQURED：被调用的事务会在现有的事务内运行。
+- REQURED_NEW：调用的方法要启动一个新的事务来执行这个方法，当前自己的事务先挂起，当调用的新创建的事务结束后，自己的再继续，
 
 
 
@@ -354,6 +400,10 @@ service实现类或方法中加上@Transactional注解后，在service实现类�
 - **适配器模式** :Spring AOP 的增强或通知(Advice)使用到了适配器模式、spring MVC 中也是用到了适配器模式适配`Controller`。
 
 
+
+## Spring用到的设计模式
+
+https://www.cnblogs.com/wangwudi/p/12324974.html
 
 ## 过滤器和拦截器的区别
 
@@ -468,105 +518,58 @@ https://www.jianshu.com/p/7bd0cad17f23
 
 
 
+# 使用拦截器
 
+springboot使用
 
-## Spring和SpringMVC的启动过程
+## 创建拦截器类
 
+实现HandlerInterceptor
 
+重写前后两个处理方法
 
-## Spring用到的设计模式
+~~~java
 
-https://www.cnblogs.com/wangwudi/p/12324974.html
+@Slf4j
+public class MyInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
 
+        request.setAttribute(request.getRequestURL().toString(),System.currentTimeMillis());
+        log.info("pre~~~~~~~~");
+        return true;
+    }
 
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        long start = (long)request.getAttribute(request.getRequestURL().toString());
+        log.info("post~~~~~~~~ url:{} 用时:{}",request.getRequestURL(),System.currentTimeMillis()-start);
+    }
+}
 
-## Bean的作用域
-
-- singleton : 唯一 bean 实例，Spring 中的 bean 默认都是单例的。
-- prototype : 每次请求都会创建一个新的 bean 实例。
-- request : 每一次HTTP请求都会产生一个新的bean，该bean仅在当前HTTP request内有效。
-- session : 每一次HTTP请求都会产生一个新的 bean，该bean仅在当前 HTTP session 内有效。
-- global-session：全局session作用域，仅仅在基于portlet的web应用中才有意义，Spring5已经没有了。Portlet是能够生成语义代码(例如：HTML)片段的小型Java Web插件。它们基于portlet容器，可以像servlet一样处理HTTP请求。但是，与 servlet 不同，每个 portlet 都有不同的会话
-
-
-
-## Bean的生命周期
-
-- Bean 容器找到配置文件中 Spring Bean 的定义。
-- Bean 容器利用 Java Reflection API 创建一个Bean的实例。
-- 如果涉及到一些属性值 利用 `set()`方法设置一些属性值。
-- 如果 Bean 实现了 `BeanNameAware` 接口，调用 `setBeanName()`方法，传入Bean的名字。
-- 如果 Bean 实现了 `BeanClassLoaderAware` 接口，调用 `setBeanClassLoader()`方法，传入 `ClassLoader`对象的实例。
-- 如果Bean实现了 `BeanFactoryAware` 接口，调用 `setBeanClassLoader()`方法，传入 `ClassLoade` r对象的实例。
-- 与上面的类似，如果实现了其他 `*.Aware`接口，就调用相应的方法。
-- 如果有和加载这个 Bean 的 Spring 容器相关的 `BeanPostProcessor` 对象，执行`postProcessBeforeInitialization()` 方法
-- 如果Bean实现了`InitializingBean`接口，执行`afterPropertiesSet()`方法。
-- 如果 Bean 在配置文件中的定义包含 init-method 属性，执行指定的方法。
-- 如果有和加载这个 Bean的 Spring 容器相关的 `BeanPostProcessor` 对象，执行`postProcessAfterInitialization()` 方法
-- 当要销毁 Bean 的时候，如果 Bean 实现了 `DisposableBean` 接口，执行 `destroy()` 方法。
-- 当要销毁 Bean 的时候，如果 Bean 在配置文件中的定义包含 destroy-method 属性，执行指定的方法。
-
-## Spring对事务的支持
-
-spring支持两种方式的事务管理
-
-- 编程式事务管理
-- 声明式事务管理：推荐使用。通过AOP实现。最常用使用@Transactional的全注解方式
-
-在service中的一个方法上添加@Transactional注解，拦截的这个方法内抛出了指定异常后，事务会自动回滚。（如果方法内捕捉了，注解就捕获不到了，就不会自动回滚）
-
-默认下只会处理。Error和RuntimeException及其子类的UNChecked异常。一般的Exception这些Checked异常不会发生回滚。
-
-## 事务的传播属性
-
-Spring定义了7中传播行为。主要就是当一个事务方法去调用另一个事务方法，处理这些事务之间的关系。
-
-两个常用的。
-
-- 默认是REQURED：被调用的事务会在现有的事务内运行。
-- REQURED_NEW：调用的方法要启动一个新的事务来执行这个方法，当前自己的事务先挂起，当调用的新创建的事务结束后，自己的再继续，
+~~~
 
 
 
-## Spring框架是怎么解决Bean之间的循环依赖的
+## 注册拦截器
+
+通过配置类，配置MVC相关
+
+重写addInterceptors来注册拦截器，设置拦截的路径
+
+~~~java
+@Configuration
+public class WebConfigurer implements WebMvcConfigurer {
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new MyInterceptor()).addPathPatterns("/**");
+    }
+}
+~~~
 
 
 
 
-
-## SpringMVC单例Bean线程安全怎么解决
-
-
-
-- 使用ThreadLocal，ThreadLocal会为每一个线程提供一个独立的变量副本，这样在多线程对数据访问就不会出现冲突。因为每一个线程都拥有自己的变量副本，因此也就不需要同步该变量。ThreadLocal提供了线程安全的共享对象，在编写多线程代码时，可以把不安全的变量封装进ThreadLocal。
-- 如果时web应用，可以使用Spring Bean的作用域中的request,在controller类前面加上@Scope("****")，表明每次请求都会生成一个新的Bean对象。这样也能起到线程安全的作用。
-- 使用线程同步，关键字synchronized当线程较多时，当一个线程调用该方法时，其他想要调用此方法的线程就要block ，多线程并发量大的时候会对性能有一定的影响。
-
-
-
-## 单例Bean的优势
-
-由于不会每次都新创建新对象所以有一下几个性能上的优势：
-
-1. 减少了新生成实例的消耗
-
-新生成实例消耗包括两方面，第一，spring会通过反射或者cglib来生成bean实例这都是耗性能的操作，其次给对象分配内存也会涉及复杂算法。
-
-2. 减少jvm垃圾回收
-
-由于不会给每个请求都新生成bean实例，所以自然回收的对象少了。
-
-3. 可以快速获取到bean
-
-因为单例的获取bean操作除了第一次生成之外其余的都是从缓存里获取的所以很快。
-
-劣势：不能做到线程安全。
-
-
-
-
-
-## 
 
 
 

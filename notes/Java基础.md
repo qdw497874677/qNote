@@ -1092,3 +1092,8 @@ https://developer.ibm.com/zh/articles/j-lo-javaio/
 - **调用类的方法**
   - 通过Class类的getMethod(String name,Class...parameterTypes)方法获取一个Method对象。设置好参数。使用Object invoke(Object obj,Object[] args)进行调用，并向方法中传递设置的obj对象的参数信息。Object 为方法的返回值
 
+
+
+### 为什么反射创建对象慢
+
+是因为编译器无法对发射相关的代码做优化。即时编译器（JIT）在运行期间将字节码文件编译成机器码，并做了一些优化。反射涉及动态解析的类型，因此无法执行某些优化。
