@@ -1315,9 +1315,9 @@ FIFO：多线程争用资源的线程会封装成node进入这个队列，队列
 
 ![img](Java并发.assets/640.png)
 
-### 源码解析
 
-#### CLH队列
+
+### CLH队列
 
 ~~~java
 static final class Node {
@@ -1355,33 +1355,13 @@ waitStatus的状态包括：
 
 因为多线程竞争的原因，CLH队列插入节点和设置节点都采用CAS+自旋的方式来完成。
 
-#### 等待队列
+### 等待队列
 
 和一个Condition对象绑定。一个Condition对象去调用await方法，当前线程进入这个condition的等待队列中，然后释放锁。一个Condition对象去调用signal方法，会将对待队列里面的第一个waiter转移到同步队列。
 
-#### 独占模式
+### 独占模式
 
-主要方法：
-
-- acquire()：获取资源
-  - 执行tryAcquire(arg)，如果返回false，就把线程封装成Node加入CLH队列尾部。tryAcquire(arg)是抽象方法，需要实现。
-- release()：释放资源
-  - 执行tryRelease(arg)，如果返回true，说明有资源可用，就会获取CLH队列头部第一个没有被取消的节点，然后唤醒。tryRelease(arg)是抽象方法，需要实现。
-
-#### 共享模式
-
-主要方法：
-
-- acquireShared(int arg)
-  - 执行tryAcquireShared(arg)，返回一个int表示资源数量。如果还有资源尝试唤醒队列中下一个线程。tryAcquireShared(arg)需要实现
-- releaseShared(int arg)
-  - 执行tryReleaseShared(arg)，返回true表示还有资源剩余，唤醒队列第一个线程。tryReleaseShared(arg)需要实现。
-
-
-
-#### 关键方法
-
-##### acquire()
+#### acquire(int)
 
 是独占模式下，获取共享资源的顶级入口。如果获取到资源直接返回，否则进入同步队列直到获得资源为止，获取到资源前的过程中是忽略中断的。这个也是可重用锁的lock方法，lock方法中就是一个acquire(1)
 
@@ -1395,10 +1375,14 @@ public final void acquire(int arg) {
 
 函数流程：
 
-1. tryAcquire(arg)方法尝试去获取资源
+1. tryAcquire(arg)方法尝试去获取资源，如果成功直接返回
 2. addWaiter()方法将线程加入同步队列尾部，标记为独占模式
-3. acquireQueued()使线程阻塞在等待队列中获取资源，一直等待获取到后才返回。当返回时如果在等待期间被中断过就返回true，否则返回false。
+3. acquireQueued()使线程进入等待状态，当轮到自己（被unpark）时尝试获取资源，一直等待获取到后才返回。当返回时如果在等待期间被中断过就返回true，否则返回false。
 4. 对于在队列中阻塞过程发生的中断，会在获取资源后通过selfInterrupt()方法自我中断，补上。
+
+![image-20201015230705017](Java并发.assets/image-20201015230705017.png)
+
+
 
 ##### tryAcquire()
 
@@ -1498,16 +1482,292 @@ final boolean acquireQueued(final Node node, int arg) {
 流程：
 
 1. 标记是否拿到资源，标记等待过程是否被中断过
-2. 开始自旋操作
-   1. 拿到前驱节点去判断，如果前驱是头结点（头结点获取了资源），那么作为老二就是去用tyAcquire去尝试获取资源。获取到后将head指向自己表示为头结点，把之前拿到的前驱节点引用p置为null，帮助gc。
+2. 开始自旋操作。这里循环指的是，线程如果进入等待后重新被唤醒了，接着尝试获取资源，不行就接着尝试进入等待。
+   1. 拿到前驱节点去判断，如果前驱是头结点（头结点获取了资源），那么作为老二就是去用tyAcquire去尝试获取资源。获取到后将head指向自己表示为头结点，把之前拿到的前驱节点引用p置为null，帮助gc。（）
    2. 如果不是老二，或者没有获取到资源就表示自己可以先休息了，通过后方法内的park()方法进入等待状态，这个方法可以将哪些被中断的等待线程唤醒后发现拿不到资源继续park()等待。通过shouldParkAfterFailedAcquire()进入等待状态，配合parkAndCheckInterrupt()方法来标记是否有被中断。
    3. 最后都要执行，也就是在finally中判断是否拿到资源，然后调用cancelAcquire()来取消节点在队列中的等待。
 
 ##### shouldParkAfterFailedAcquire()
 
-用来检查状态，看看自己是不是真的可以进入waiting状态了。
+用来检查状态，看看自己是不是真的可以进入waiting状态了，寻找一个安全的休息点。
+
+~~~java
+private static boolean shouldParkAfterFailedAcquire(Node pred, Node node) {
+        int ws = pred.waitStatus;
+        if (ws == Node.SIGNAL)
+            /*
+             * This node has already set status asking a release
+             * to signal it, so it can safely park.
+             */
+            return true;
+        if (ws > 0) {
+            /*
+             * Predecessor was cancelled. Skip over predecessors and
+             * indicate retry.
+             */
+            do {
+                node.prev = pred = pred.prev;
+            } while (pred.waitStatus > 0);
+            pred.next = node;
+        } else {
+            /*
+             * waitStatus must be 0 or PROPAGATE.  Indicate that we
+             * need a signal, but don't park yet.  Caller will need to
+             * retry to make sure it cannot acquire before parking.
+             */
+            compareAndSetWaitStatus(pred, ws, Node.SIGNAL);
+        }
+        return false;
+    }
+~~~
+
+流程：
+
+1. 判断前驱节点，是不是SIGNAL状态，如果是说明前驱节点已经park进入等待状态了，所以自己也可以进入了，就返回true了
+2. 如果前驱状态>0，即前驱放弃排队了，那么当前节点就一直往前找到一个正常等待的节点排在后面。
+3. 如果前驱<=0，即前驱正常，就把前驱状态设置为SIGNAL
 
 
+
+##### parkAndCheckInterrupt()
+
+在shouldParkAfterFailedAcquire()成功找到安全休息点后，通过park使自己线程进入等待状态，唤醒后返回自己是不是被中断的。
+
+~~~java
+private final boolean parkAndCheckInterrupt() {
+        LockSupport.park(this);
+        return Thread.interrupted();
+    }
+~~~
+
+流程：
+
+1. 使自己进入等待状态
+2. 醒来时返回自己的中断状态，并重置中断标记
+
+#### release(int)
+
+此方法是独占模式下线程释放共享资源的顶层入口。**如果所有资源全部释放了，就会唤醒等待队列中的其他线程来获取资源**。根据tryRelease的返回值来判断是否释放了所有资源。
+
+如果release抛异常了，没有unpark，那么队列中的线程永远也不会被唤醒了。
+
+~~~java
+public final boolean release(int arg) {
+        if (tryRelease(arg)) {
+            Node h = head;
+            if (h != null && h.waitStatus != 0)
+                unparkSuccessor(h);
+            return true;
+        }
+        return false;
+    }
+~~~
+
+##### tryRelease(int)
+
+尝试去释放指定量的资源，成功释放后返回true。为了实现可重用，当state=0时才返回true，让release去唤醒下一个线程。
+
+~~~java
+protected boolean tryRelease(int arg) {
+        throw new UnsupportedOperationException();
+    }
+~~~
+
+这个方法要求独占模式的子类去实现。
+
+##### unparkSuccessor(Node)
+
+用于唤醒等待队列中的下一个线程。总结：**用unpark()唤醒等待队列中最前面的那个未放弃的线程。**
+
+~~~java
+private void unparkSuccessor(Node node) {
+        /*
+         * If status is negative (i.e., possibly needing signal) try
+         * to clear in anticipation of signalling.  It is OK if this
+         * fails or if status is changed by waiting thread.
+         */
+        int ws = node.waitStatus;
+        if (ws < 0)
+            compareAndSetWaitStatus(node, ws, 0);
+
+        /*
+         * Thread to unpark is held in successor, which is normally
+         * just the next node.  But if cancelled or apparently null,
+         * traverse backwards from tail to find the actual
+         * non-cancelled successor.
+         */
+        Node s = node.next;
+        if (s == null || s.waitStatus > 0) {
+            s = null;
+            for (Node t = tail; t != null && t != node; t = t.prev)
+                if (t.waitStatus <= 0)
+                    s = t;
+        }
+        if (s != null)
+            LockSupport.unpark(s.thread);
+    }
+~~~
+
+### 共享模式
+
+共享模式实质就是控制一定数量的线程并发。
+
+#### acquireShared(int)
+
+此方法是共享模式下，线程获取共享资源的顶级入口。他会指定定量的资源，获取成功则直接返回，获取失败就进入等待队列，直到取到资源为止。
+
+~~~java
+public final void acquireShared(int arg) {
+        if (tryAcquireShared(arg) < 0)
+            doAcquireShared(arg);
+    }
+~~~
+
+流程：
+
+1. 通过tryAcquireShared()去获取资源
+2. 如果剩余资源不足，就通过doAcquireShared()进入等待队列，直到获取到资源
+   1. 线程自己获取到资源后，如果还剩余资源会尝试唤醒下一个线程
+
+##### doAcquireShared(int)
+
+此方法将当前线程加入等待队列尾部并休息，直到其他线程释放资源唤醒自己获取到足够资源后，才返回。
+
+~~~java
+private void doAcquireShared(int arg) {
+        final Node node = addWaiter(Node.SHARED);
+        boolean failed = true;
+        try {
+            boolean interrupted = false;
+            for (;;) {
+                final Node p = node.predecessor();
+                if (p == head) {
+                    int r = tryAcquireShared(arg);
+                    if (r >= 0) {
+                        setHeadAndPropagate(node, r);
+                        p.next = null; // help GC
+                        if (interrupted)
+                            selfInterrupt();
+                        failed = false;
+                        return;
+                    }
+                }
+                if (shouldParkAfterFailedAcquire(p, node) &&
+                    parkAndCheckInterrupt())
+                    interrupted = true;
+            }
+        } finally {
+            if (failed)
+                cancelAcquire(node);
+        }
+    }
+~~~
+
+流程和acquireQueue()类似
+
+跟独占模式相比，只有线程是head.next，即老二时才会尝试获取资源，有剩余的话还会唤醒之后的线程。如果老二不够，老三够，资源时不会让给老三的，AQS严格保证队列性质，为了保证公平
+
+##### setHeadAndPropagate(Node,int)
+
+让自己成为头结点，如果有剩余让给下一个需要的线程，去做doReleaseShared()来唤醒下一个状态正常的线程。
+
+~~~java
+private void setHeadAndPropagate(Node node, int propagate) {
+        Node h = head; // Record old head for check below
+        setHead(node);
+        /*
+         * Try to signal next queued node if:
+         *   Propagation was indicated by caller,
+         *     or was recorded (as h.waitStatus either before
+         *     or after setHead) by a previous operation
+         *     (note: this uses sign-check of waitStatus because
+         *      PROPAGATE status may transition to SIGNAL.)
+         * and
+         *   The next node is waiting in shared mode,
+         *     or we don't know, because it appears null
+         *
+         * The conservatism in both of these checks may cause
+         * unnecessary wake-ups, but only when there are multiple
+         * racing acquires/releases, so most need signals now or soon
+         * anyway.
+         */
+        if (propagate > 0 || h == null || h.waitStatus < 0 ||
+            (h = head) == null || h.waitStatus < 0) {
+            Node s = node.next;
+            if (s == null || s.isShared())
+                doReleaseShared();
+        }
+    }
+~~~
+
+
+
+#### releaseShared()
+
+此方法是共享模式下线程释放资源的顶层入口。释放指定资源，如果成功释放且允许唤醒等待线程，他会唤醒等待队列里的下一个状态正常的线程来获取资源。
+
+~~~java
+public final boolean releaseShared(int arg) {
+        if (tryReleaseShared(arg)) {
+            doReleaseShared();
+            return true;
+        }
+        return false;
+    }
+~~~
+
+流程：
+
+1. 尝试释放指定数量的资源。
+2. 释放成功就去唤醒下一个线程。
+
+##### tryReleaseShared(int)
+
+这个方法也需要让子类去重写，用来释放执行数量的资源。共享模式中就不需要考虑重用问题了。
+
+~~~java
+protected boolean tryReleaseShared(int arg) {
+        throw new UnsupportedOperationException();
+    }
+~~~
+
+
+
+##### doReleaseShared()
+
+用于唤醒后继线程
+
+~~~java
+private void doReleaseShared() {
+        /*
+         * Ensure that a release propagates, even if there are other
+         * in-progress acquires/releases.  This proceeds in the usual
+         * way of trying to unparkSuccessor of head if it needs
+         * signal. But if it does not, status is set to PROPAGATE to
+         * ensure that upon release, propagation continues.
+         * Additionally, we must loop in case a new node is added
+         * while we are doing this. Also, unlike other uses of
+         * unparkSuccessor, we need to know if CAS to reset status
+         * fails, if so rechecking.
+         */
+        for (;;) {
+            Node h = head;
+            if (h != null && h != tail) {
+                int ws = h.waitStatus;
+                if (ws == Node.SIGNAL) {
+                    if (!compareAndSetWaitStatus(h, Node.SIGNAL, 0))
+                        continue;            // loop to recheck cases
+                    unparkSuccessor(h);
+                }
+                else if (ws == 0 &&
+                         !compareAndSetWaitStatus(h, 0, Node.PROPAGATE))
+                    continue;                // loop on failed CAS
+            }
+            if (h == head)                   // loop if head changed
+                break;
+        }
+    }
+~~~
 
 
 
@@ -1625,13 +1885,17 @@ final boolean nonfairTryAcquire(int acquires) {
 
 ## 自定义同步组件
 
-同步器的设计是基于模板方法的。使用者需要继承同步器并重写指定方法。之后将同步器组合在自定义的同步组件中，去调用同步器提供的模板方法，这些模板方法会调用使用者重写的方法。重写方法时，对**同步状态的访问和修改要用同步器提供的三个方法**：
+同步器的设计是基于模板方法的。使用者需要继承同步器并重写指定方法。之后将同步器组合在自定义的同步组件中，去调用同步器提供的模板方法，这些模板方法会调用使用者重写的方法。
+
+AQS提供了获取资源失败入队，唤醒出队等实现。只需要开发者去实现获取释放资源即可。
+
+重写方法时，对**同步状态的访问和修改要用同步器提供的三个方法**：
 
 - getState()：获取当前同步状态
 - setState(int newState)：设置当前同步状态
 - compareAndSetState(int expect,int update)：使用CAS设置当前状态，能保证原子性。
 
-可重写的方法有：
+**需要重写的方法**：
 
 - isHeldExclusively()：该线程是否正在独占资源。只有用到condition才需要去实现它。
 - tryAcquire(int)：独占方式。尝试获取资源，成功则返回true，失败则返回false。
