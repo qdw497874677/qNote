@@ -160,6 +160,7 @@ socket.accept()、socket.read()、socket.write()都时阻塞的
   - 传递数据通过Channel和Buffer。用Channel连接双方，调用read或者write来在Buffer中读取或者写入数据。
 - 非阻塞
   - 在网络IO中，对于调用OS来准备数据的阶段是非阻塞了，会立刻返回。在数据从内核（网卡）到用户内存拷贝的过程中时CPU操作。虽然不是阻塞的，但是方法返回时很多时候是没有可操作性的余地的，需要不断的轮训。通过配合多路复用选择器减少线程切换的开销。
+  - 这个非阻塞在通道上的具体体现就是，线程在调用通道请求读取数据时，只能得到目前可用的数据，如果没有数据可用也不会阻塞。
 - 有Selecter
   - 利用多路复用（内核实现，可以单线程处理多个socket），来让一个线程处理多个channel。将channel注册到Selecter中，调用select方法，会阻塞直到某个注册的通道有事件就绪。
   - 用法：用channel的register方法把自己在selector中注册一个表示等待接收状态的事件（selector会根据状态是否满足而返回）。循环地调用selector地select()，会阻塞到有channel准备好。准备好了以后调用selector地selectedKeys()获取SelectionKey。可以用迭代器去遍历每个key，判断状态来处理调用不同地处理方法。如果有可接受状态，就通过注册的channel来调用accept()获取新的channel，然后把他注册到selector上，设置为读状态。等下次收到读状态完成的事件，就根据事件获取channel去做
