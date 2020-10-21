@@ -359,3 +359,37 @@ sudo docker pull rabbitmq：management
 docker run -dit --name myrabbitmq -e RABBITMQ_DEFAULT_USER=admin -e RABBITMQ_DEFAULT_PASS=admin -p 15672:15672 -p 5672:5672 rabbitmq:management
 ~~~
 
+
+
+
+
+# 安装KafKa
+
+安装docker和docker-compose
+
+kafka需要zookeeper管理
+
+## 拉取镜像
+
+~~~bash
+docker pull wurstmeister/zookeeper
+docker pull wurstmeister/kafka
+~~~
+
+
+
+## 启动kafka
+
+可能会JVM内存不足，所以多一个设置。docker logs kafka看日志
+
+~~~bash
+docker run -d --name kafka -p 9092:9092 -e KAFKA_BROKER_ID=0 -e KAFKA_HEAP_OPTS="-Xmx256M -Xms256M" -e KAFKA_ZOOKEEPER_CONNECT=49.233.90.47:2181 -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://49.233.90.47:9092 -e KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092 -t wurstmeister/kafka
+~~~
+
+## 测试
+
+进入kafka容器
+
+~~~bash
+docker exec -ti kafka /bin/bash
+~~~
