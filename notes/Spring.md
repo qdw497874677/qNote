@@ -124,9 +124,9 @@ Spring为了解决单例的循环依赖问题使用了**三级缓存**：
 
 从缓存中获取bean用getSingleton()，先从一级缓存然后二级然后三级。
 
-在一个bean A创建的第一步就把自己放到三级缓存中了，发现自己依赖B，从缓存中没找到创建B把B获取，B创建的时候把自己放入三级缓存，发现自己依赖A就去缓存中获取到不完整的A，然后B完成所有的初始化进入了一级缓存。A拿到了完整的B（B获取到了A的引用）
+在一个**bean A创建的第一步就把自己放到三级缓存中了**，发现自己依赖B，从缓存中没找到创建B把B获取，B创建的时候把自己放入三级缓存，发现自己依赖A就去缓存中获取到不完整的A，然后B**完成所有的初始化进入了一级缓存**。A拿到了完整的B（B获取到了A的引用）
 
-所以Spring不能解决构造器的循环引用
+**所以Spring只能解决单例模式的属性注入的循环依赖**
 
 
 
@@ -138,7 +138,7 @@ ClassPathXmlApplicationContext通过多次继承才继承到ApplicationContext �
 
 **ApplicationContext实际上就是一个BeanFactory**
 
-回到ClassPathXmlApplicationContext，他里面有一个refresh方法（加锁的方法）来重新初始化ApplicationContext，第一次初始化也是从这开始。
+回到ClassPathXmlApplicationContext，他里面有一个refresh方法（同步代码块里）来重新初始化ApplicationContext，第一次初始化也是从这开始。
 
 ~~~java
 @Override
@@ -302,7 +302,7 @@ intercept方法中创建拦截器链，如果拦截器链是空的就直接执�
 
 MVC是一种设计模式，将web层进行解耦（**用户**与**控制器**之间发送请求、返回响应；**控制器**与模型之间数据处理、返回结果；**控制器**与**视图**之间推送模型，响应结果）。SpringMVC就是在Spring平台上的实现的MVC开发框架。
 
-主要核心就是：DispatcherServlet把收到的请求分别依次委托给各个组件去处理：HanderMapping（处理器映射器）、HanderAdapter（处理器适配器）去做处理返回ModelAndView、ViewResolver（视图解析器）把ModelAndView解析为View、View（视图）最后处理把最终结果返回给DispatcherServlet。DispatcherServlet对请求作出响应。
+主要核心就是：DispatcherServlet把收到的请求分别依次委托给各个组件去处理：HanderMapping（处理器**映射器**）、分配到对应的HanderAdapter（**处理器适配器**）去交给对应的**处理器**去做处理返回ModelAndView、ViewResolver（视图解析器）把ModelAndView解析为View、View（视图）最后处理把最终结果返回给DispatcherServlet。DispatcherServlet对请求作出响应。
 
 ![在这里插入图片描述](https://img-blog.csdnimg.cn/20190630145911981.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2xpdGlhbnhpYW5nX2thb2xh,size_16,color_FFFFFF,t_70)
 

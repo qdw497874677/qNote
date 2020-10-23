@@ -1464,6 +1464,8 @@ private Node enq(final Node node) {
 
 前面tryAcquire失败了，执行完addWaiter后，线程已经被放到队列尾部了。接下来acquireQueued就要让线程进入等待状态休息，直到其他线程释放资源后唤醒自己。
 
+在这个队列中在合适的地方等待，被唤醒时继续尝试获取资源，否则接着等待。释放资源的节点的清除，是通过后面的线程获取资源后来操作将引用置为null，让gc来清理。
+
 ~~~java
 final boolean acquireQueued(final Node node, int arg) {
         boolean failed = true;
@@ -1892,7 +1894,7 @@ final boolean nonfairTryAcquire(int acquires) {
 
 
 
-## 自定义同步组件
+### 自定义同步组件
 
 同步器的设计是基于模板方法的。使用者需要继承同步器并重写指定方法。之后将同步器组合在自定义的同步组件中，去调用同步器提供的模板方法，这些模板方法会调用使用者重写的方法。
 
