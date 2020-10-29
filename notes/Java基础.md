@@ -514,7 +514,7 @@ public class Demo extends Father implements Serializable {
 
 #### cloneable实现
 
-需要被克隆的类的操作：实现Cloneable接口，并重写Object类的clone()方法。在clone方法中用父类clone创建对象，然后使用对象引用变量的类的clone方法创建变量对象，赋值给自己的clone对象的引用变量。
+需要被克隆的类的操作：实现Cloneable接口，并重写Object类的clone()方法。在clone方法中用父类clone创建对象，然后使用对象引用变量的类的clone方法创建变量对象，赋值给自己的clone对象的引用变量。**（Object的clone方法只能完成浅克隆，通过这个基类克隆方法来去构建自己需要的形式）**
 
 对引用的类的操作：实现Cloneable接口，并重写Object类的clone()方法。如果引用的类也引用了别的类的对象，也在clone方法中去构建克隆的对象。
 
@@ -543,7 +543,7 @@ public class Demo extends Father implements Serializable {
 
 ## HashMap中的key为什么重写eqauls和hashcode
 
-HashMap比较key的时候，先对key的使用hashcode()，比较其值是否相等，若相等再用equals()比较。若不等就认为他们不相等。
+HashMap比较key的时候，先对key的使用hashcode()，比较其值是否相等，**若hash值相等再用==和equals()比较key**。若不等就认为他们不相等。
 
 自定义的类的hashcode()方法继承与Object类，返回与这个对象的存储地址和字段等相关的一个值。所以逻辑上相等的对象，默认的hashcode()并不相等。
 
@@ -574,9 +574,9 @@ if (p.hash == hash && ((k = p.key) == key || (key != null && key.equals(k))))
 
 ### String类
 
-**字符串**：字符串是常量，一旦创建不能更改。然而String类的引用（变量或者内存），却可以指向不同的字符串。因为字符串对象虽然不能修改，但是他们的地址可以共享。
+**字符串**：字符串是常量，一旦创建不能更改。然而String类的对象，可以指向不同的字符串。因为字符串对象虽然不能修改，但是他们的地址可以共享。
 
-String是一个类，包含属性和方法。**String类被final修饰**，不能被继承。String类底层数据结构为一个char型的数组，**被final修饰的**，相当于保存的是某个字符串的内存地址。String类不能修改字符串本身，也不能修改指向字符串地址的变量。String的值是不能改变的，String类是一个不可变类。不可变类的好处是，**保证线程安全。**
+**String类被final修饰**，不能被继承。String类底层数据结构为一个char型的数组，**被final修饰的**，相当于保存的是某个字符串的内存地址。String类不能修改字符串本身，也不能修改指向字符串地址的变量。String的值是不能改变的，String类是一个不可变类。不可变类的好处是，**保证线程安全。**
 
 new String() 和 new String(“”)都是声明一个新的空字符串，是空串不是null。
 

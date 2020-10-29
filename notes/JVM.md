@@ -358,7 +358,11 @@ protected Class<?> loadClass(String name, boolean resolve)
 
 ![image-20200418230100841](JVM.assets/image-20200418230100841.png)
 
-可作为GC根的对象
+#### GC roots
+
+是一组必须活跃的引用
+
+这些引用能指到的对象有。
 
 - 虚拟机栈中引用的对象（局部变量）
 - 本地方法栈中本地方法引用的对象
