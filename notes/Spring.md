@@ -249,9 +249,9 @@ ClassPathXmlApplicationContext通过多次继承才继承到ApplicationContext �
 代理技术分为动态代理和静态织入，springaop是基于动态代理的
 
 - 动态代理：Spring中用动态代理实现AOP
-  - JDK动态代理：基于反射实现。针对实现了接口的类。
+  - JDK动态代理：基于**反射实现**。针对实现了接口的类。
     - 基本原理：代理类需要**实现InvocationHandler接口并且重写生成代理类中invoke**方法来编写方法的增强逻辑。代理类创建目标对象的方法中使用反射技术来生成相同接口的代理对象。当执行代理对象的增强方法时，会调到这个invoke来实现方法增强。
-  - CGLIB动态代理：基于继承的机制实现。不需要目标类实现接口
+  - CGLIB动态代理：基于**继承**的机制实现，通过修改代理对象的class文件中的字节码来生成子类。不需要目标类实现接口
     - 基本原理：代理类**实现MethodInterceptor 接口**，表示自己是一个方法拦截器。在创建代理对象的方法中使用Enhancer 对象来创建代理对象，设置对应的方法来解器，即设置自己。代理类**重写接口的intercept拦截方法**来实现目标方法的增强。
 - 静态织入（静态代理）：让编译器在编译期间，织入代码。
 
@@ -415,15 +415,86 @@ Spring定义了7中传播行为。主要就是当一个事务方法去调用另�
 
 ## Spring用到的设计模式
 
-https://www.cnblogs.com/wangwudi/p/12324974.html
+## 过滤器和拦截器
 
-## 过滤器和拦截器的区别
+### 区别
 
-https://www.jianshu.com/p/7bd0cad17f23
+过滤器（filter）依赖于servlet容器，是基于函数回调。只能对http请求进行拦截。关注web请求
 
-过滤器依赖于servlet容器，是基于函数回调
+拦截器（interceptor）依赖于SpringMVC，是基于反射机制，是aop的一种应用。只能对 Controller 的 HTTP 请求进行拦截。关注方法调用
 
-拦截器不依赖servlet容器，是基于反射机制，是aop的一种应用。可以获取IOC容器中的bean，来调用业务逻辑
+过滤器在外，拦截器在内。
+
+### 过滤器
+
+### 使用
+
+- 编写过滤器类
+  - 实现filter，在doFilter方法中调用filterChain的doFilter来让继续责任链。调用过滤器链之前是前处理，之后为后处理。
+- 注册过滤器bean
+  - xml
+  - 注解
+  - 注册类注入bean
+
+#### 原理
+
+每个filter的执行是通过tomcat容器的ApplicationFilterChain来做转发的
+
+关键方法精简后
+
+~~~java
+private void internalDoFilter(ServletRequest request,
+                                  ServletResponse response)
+        throws IOException, ServletException {
+        if (pos < n) {//还有未执行的filter
+            ApplicationFilterConfig filterConfig = filters[pos++];
+            Filter filter = filterConfig.getFilter();
+            filter.doFilter(request, response, this);
+        }else{//直接调用service
+            servlet.service(request, response);
+        }
+}
+~~~
+
+- 当判断过滤器全部执行过后，调用service，执行后面的servlet的工作
+- 当service执行完后，每个过滤器递归返回，将doFilter后面的处理处理完，filter就全部执行完了。
+
+
+
+### 拦截器
+
+![img](https://img2018.cnblogs.com/blog/1480413/201903/1480413-20190302114742470-1931613310.png)
+
+是SpringMVC的，在dispatcher后面，controller前后做处理。
+
+
+
+### 使用
+
+- 编写拦截器类
+  - 实现HandlerInterceptor接口，或者继承HandlerInterceptorAdapter类
+  - preHandle：业务处理器处理请求完成之前
+  - postHandle：业务处理器处理请求完成之后，可以处理ModelAndView
+  - afterCompletion：在DispatcherServlet完全处理完之后被调用。顺序和preHandle的顺序相反，一个拦截器中的这两个方法就像是括号，把具体处理夹在中间。
+
+
+
+
+
+### 原理
+
+通过HandlerExecutionChain把拦截器组织成责任链，把责任链放在数组中。
+
+DispatcherServlet类为SpringMVC的核心组件，所有经过SpringMVC的请求，都会执行doDispatch方法，其中就会使用到拦截器组成的责任链类HandlerExecutionChain。
+
+执行HandlerExecutionChain中的applyPreHandle方法，这个方法中的大概逻辑为：
+
+- 如果拦截器都通过的话，会把所有数量的拦截器的前处理都执行完，每次执行记录当前执行的拦截器序号。
+- 这个序号就是为了，如果过程中，有前处理方法返回false后，就从这个拦截器开始反向执行拦截器的afterCompletion方法。**并且这个请求之后不再做处理了，从doDispatch方法中返回。**
+- 如果拦截器都执行完了，没有返回false的。就对请求做具体处理了，比如controller。
+- 然后按顺序倒序执行拦截器的后处理方法。
+- 然后处理Dispatch最终结果。
+- 最后倒序执行拦截器的afterCompletion方法。
 
 
 
