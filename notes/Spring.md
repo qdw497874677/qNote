@@ -456,8 +456,10 @@ private void internalDoFilter(ServletRequest request,
 }
 ~~~
 
+- 用int类型的pos表示当前执行的filter数量，并且获取对应位置的filter
+- 调用filter中的doFilter，同时在doFilter中递归调用ApplicationFilterChain的doFilter，这样不断把把filter中doFilter前的代码执行完。
 - 当判断过滤器全部执行过后，调用service，执行后面的servlet的工作
-- 当service执行完后，每个过滤器递归返回，将doFilter后面的处理处理完，filter就全部执行完了。
+- 当service执行完后，每个过滤器递归返回，将doFilter后面的代码执行完，filter就全部执行完了。
 
 
 

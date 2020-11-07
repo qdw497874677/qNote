@@ -272,32 +272,32 @@ volatile修饰符适用于以下场景：某个属性被多个线程共享，其
 
 ### wait()
 
-在同步方法（不在的话会报非法监视器状态的异常）中调用wait方法，会让**发起调用的当前线程**释放cpu和锁资源，变为等待状态进入锁对象的等待队列中，等待唤醒。**当线程被唤醒后，且获取到锁后，wait方法才会返回。**
+在同步代码（不在的话会报非法监视器状态的异常）中调用岁多对象的wait方法，会让**发起调用的当前线程**释放cpu和锁资源，变为等待状态进入锁对象的监视器的等待队列中，等待唤醒。**当线程被唤醒后，且获取到锁后，wait方法才会返回。**
 
 ### notify()、notifyAll()
 
-在同步方法中调用锁对象的notify()会让对象的等待队列中的随机一个线程**进入同步队列**，状态变为阻塞，来竞争锁。调用notify()是会唤醒等待队列中所有的线程，都进入到同步队列中去竞争锁。
+在同步代码中调用锁对象的notify()会让调用的锁对象的监视器的等待队列中的随机一个线程**进入同步队列**，状态变为阻塞，来竞争锁。调用notify()是会唤醒等待队列中所有的线程，都进入到同步队列中去竞争锁。
 
 ### 线程方法
 
 - sleep：当前线程进入休眠，**交出CPU，但是不释放锁**。sleep可以在任意区域调用，进入的是TIMED-WAITING状态。
 - yiled：使当前线程让出CPU，给优先级相同或更高的线程，回到RUNNABLE状态，重新竞争CPU时间片。和sleep类似**不会释放锁**。
-- join：当前线程阻塞直到被调用join的线程运行终止。**底层使用wait，也会释放锁**。
+- join：当前线程阻塞直到被调用join的线程运行终止。**底层使用wait，也会释放锁**。锦灯WAITING状态。
   - join方法是用synchronized以目标线程作为锁对象。A线程调用B线程的join：A进入同步状态**以线程B作为锁对象**，判断B处于运行状态后**调用wait**阻塞当前进入同步区域的线程。**由于线程终止时会调用自己的notifyAll()方法，唤醒所有以自己为锁的在等待的线程。**当B执行完终止后，唤醒处于等待状态的A线程。
 - interrupt()：设置线程的中断标志位。要看线程去怎么处理中断标志。
-  - 如果线程通过sleep、wait、join处于等待状态，那么线程会定期检查中断位是否为true，会在这些方法中抛出IntrruptedException异常，并在抛出异常后重置中断位为false。
-  - 如果线程正在运行竞争synchronized、执行lock()，那么是不可中断的，他们会暂时忽略，知道成功获取资源后再去把中断补回来
+  - 如果线程通过sleep、wait、join处于等待状态，那么线程会**定期检查中断位是否为true**，会在这些方法中抛出IntrruptedException异常，并在抛出异常后重置中断位为false。
+  - 如果线程正在运行竞争synchronized、执行可重用锁的lock()，那么是不可中断的，他们会暂时忽略，直到成功获取资源后再去把中断补回来
   - 判断中断标志的三种方式：
     - isInterrupted()：不会重置
     - interrupted()：会重置
     - throw InterruptException：抛出异常同时重置。
-- suspend()/resume()：suspend会挂起线程，直到被resume。调用suspend和调用resume的线程，可能会因为挣锁的问题发生锁死。所有JDK7已经弃用。
+- suspend()/resume()：suspend会挂起线程（不会释放锁资源），直到被resume。调用suspend和调用resume的线程，可能会因为挣锁的问题发生锁死。所有JDK7已经弃用。
 
 
 
 ### 等待池和锁池（等待队列、同步队列）
 
-在同步代码中，调用了锁对象的wait方法后，当前线程就进入等待池（等待队列），状态由运行状态变为等待状态。当锁对象的notify或者notifyAll方法被调用后，锁对象对应的等待池中的线程就进入到锁池中（同步队列），状态变为阻塞状态，来竞争锁（优先级高的线程获取到锁的概率大）。
+在同步代码中，调用了锁对象的wait方法后，当前线程就进入等待池（等待队列），状态由运行状态变为等待状态。当锁对象的notify或者notifyAll方法被调用后，锁对象监视器的等待池中的线程就进入到锁池中（同步队列），状态变为阻塞状态，来竞争锁（优先级高的线程获取到锁的概率大）。
 
 ### 阻塞状态和等待状态有什么区别
 
@@ -323,17 +323,19 @@ Java的线程是不允许启动两次的，第二次调用必然会抛出Illegal
 
 #### 继承Thread类
 
-重写
+重写run
 
 #### 实现Runnable接口
+
+重写run。作为构造器参数创建Thread对象
 
 #### 实现Callable接口
 
 有返回值，能在方法定义上throws异常
 
-通过FutureTask类，传入Callable接口实现。FutureTask实现了Runnable接口和Future接口，可以作为Thread的参数传入。（适配器模式）
+通过FutureTask类，传入Callable接口实现。FutureTask实现了Runnable接口和Future接口，可以作为Thread的参数传入（适配器模式）。执行Thread对象的start后通过FutureTask的get阻塞获取结果
 
-也可以通过线程池的submit方法来执行，返回一个Future的实例，通过get阻塞获取结果。
+也可以通过线程池的submit方法来执行，返回一个Future的实例，通过Future的get阻塞获取结果。
 
 一个FutureTask只执行一次。
 
@@ -384,11 +386,13 @@ Runnable接口不会返回结果或抛出异常检查，Callable接口可以。
 
 Callable可以通过Future的实现类来完成执行和获取结果
 
-工具类Executors可以实现两者实现类对象之间的像话转化。（Executors.callable（Runnable task）或 Executors.callable（Runnable task，Object resule））。
+工具类Executors可以实现两者实现类对象之间的相互转化。（Executors.callable（Runnable task）或 Executors.callable（Runnable task，Object resule））。
 
 
 
 ### 如何让线程运行10秒停下来
+
+指的是目标线程可能执行很长时间，现在要求10秒后被动停下来。
 
 让线程执行，在过程中处理中断。如果有sleep在catch中去处理中断。没有sleep可以在循环的某处通过当前线程对象的isInterrupted()来处理中断。主线程sleep10秒后对线程执行中断。
 
@@ -424,7 +428,7 @@ public class Test4 {
 
 ## CAS
 
-> 比较并交换。
+> **比较并交换**。
 >
 > 比较目标值和我期望值是否相等，如果相等就执行一个操作，如果不等就不执行。
 >
@@ -477,11 +481,15 @@ var5不断地变成最新值，如果比较成功了，就把var4加上。这个
 
 ![image-20200420171556363](Java并发.assets/image-20200420171556363.png)
 
+### 优点
+
+- 用户态的操作，不用切换到内核态执行。
+
 
 
 ### 缺点
 
-- 循环时间长开销大
+- 循环时间长cpui开销大
 - 只能保证**一个**共享变量的原子操作
 - 无法解决ABA问题
 
@@ -519,7 +527,7 @@ class User{
 
 #### 解决ABA
 
-用带时间戳的原子引用AtomicStampedReference。但实际上大部分ABA问题不会影响程序并发的正确性，如果需要解决，用传统的互斥同步可能更高效。
+用带时间戳的原子引用AtomicStampedReference（时间戳可以是任意整数）。但实际上大部分ABA问题不会影响程序并发的正确性，如果需要解决，用传统的互斥同步可能更高效。
 
 ~~~java
 public class Test3 {
@@ -619,9 +627,11 @@ Compare-and-Swap，即**比较并替换**。
 1. 比较：当读取了一个值A，在将它更新为B之前，检查原值是否还是A
 2. 替换（设置）：如果是就更新为B，否则什么都不做
 
-上面两步都是原子性的。整个过程没有加锁和解锁，乐观锁策略也被称为无所编程。换句话说乐观锁不是锁，只是循环重试CAS的算法。
+上面两步都是原子性的。整个过程没有加锁和解锁，乐观锁策略也被称为无锁编程。换句话说乐观锁不是锁，只是循环重试CAS的算法。
 
-AQS框架下的锁则是先尝试用CAS乐观锁去获取锁，如果没有获取到，才转为悲观锁的方式。如RetreenLock
+AQS框架下的锁则是先尝试用CAS乐观锁去获取锁，如果没有获取到，才转为悲观锁的方式。如RetreenLock。
+
+synchronized在1.6之后优化了，也会有锁升级的过程，在轻量级锁时也是通过cas自旋锁来加锁。
 
 >  Java中的CAS最终实现，就是通过Unsafe中的native方法去调用CPU原语在实现原子操作。
 
@@ -639,6 +649,8 @@ AQS框架下的锁则是先尝试用CAS乐观锁去获取锁，如果没有获�
 > 公平锁：线程获取到同一个锁的顺序是和尝试获取锁的顺序一致的。
 >
 > 非公平锁：多个线程获取锁的顺序不是按照申请锁的顺序，有可能后申请的线程比先申请的线程优先获取锁。有可能造成优先级反转或者饥饿现象。
+>
+> 排序的线程会和不在队列中的线程竞争锁，所以可能会产生不公平的情况，但是提高了效率。
 
 - synchronized关键字，他是获取一个非公平锁。
 
@@ -722,9 +734,7 @@ class Data{
 
 #### 如何实现
 
-当线程已经获取了锁，已经在同步区域执行之后，再去获取相同的锁，就是先通过比较线程是不是当前获取资源的线程，如果是就给对象监视器中的对应的重入标记+1（或者是AQS中表示资源的state+1），并获取到锁。当退出锁范围就把标记-1。
-
-
+当线程已经获取了锁，已经在同步区域执行之后，再去获取相同的锁，就是先通过比较线程是不是当前获取资源的线程，如果是就给对象监视器中的对应的重入标记+1（或者是AQS中如果state大于0再判断当前独占线程是不是自己，如果是就state+1），并获取到锁。退出锁范围就把标记-1。当释放资源时如果state=0，表示资源全部释放了，可以去唤醒后面阻塞的线程。
 
 
 
@@ -816,6 +826,8 @@ ReentrantReadWriteLock，其读锁是共享锁，其写锁是独占锁。
 
 > 多个线程可以同时读一个共享数据，如果有线程想写共享数据，那么其他线程就不能对该资源进行读或写。
 >
+> 如果对于锁对象，没有线程在调用writeLock().lock();过程中，调用readLock().lock()是不会阻塞的，线程共享。否则其他的lock()都会阻塞。
+>
 > 写操作：原子+独占。
 
 ReadWriteLock接口，实现类 ReentrantReadWriteLock。
@@ -846,13 +858,9 @@ public class Test7 {
 
 
 
-
-
 ### synchronized
 
 synchronized是Java关键字，**解决多个线程之间访问资源的同步性**，可以保证被它修饰的方法或者代码块在**任意时刻只能有一个线程执行**。synchronized 代码块使用一对儿 monitorenter/monitorexit 指令来获取和释放对象的Monitor，**Monitor 对象是同步的基本实现单元**
-
-
 
 
 
@@ -913,14 +921,14 @@ java中每一个对象都可以作为锁。
 
 ##### 线程状态和状态转换
 
-多个线程同时请求某个对象监视器时，**对象监视器**会设置几种状态来区分请求的线程
+多个线程同时请求某个对象监视器时，**对象监视器**会设置几种状态来区分请求的线程。
 
 - 阻塞队列
   - Contention List：所有请求锁的线程将首先放置到该竞争队列。
     - 是一个后进先出队列。
   - Entry List：Contention List中那些有资格成为候选人的线程被移到Entry List。
     - 引入这个是为了降低对Contention List尾部的竞争。
-    - Owner线程会在unlock时，把Contention List中线程迁移到Entry List，并且执行Entry List中一个线程为OnDeck线程，即就绪的线程。Owner线程释放锁后，把竞争锁的权利交给OnDeck线程。牺牲了公平性，提高了吞吐量。
+    - Owner线程会在unlock时，把Contention List中线程迁移到Entry List，并且执行Entry List中一个线程为OnDeck线程，即就绪的线程。Owner线程释放锁后，把竞争锁的权利交给OnDeck线程。不保证OnDeck抢到锁，牺牲了公平性，提高了吞吐量。
 - 等待队列：
   - Wait Set：放置调用wait方法被阻塞的线程（进入waiting状态）
     - OnDeck线程获取锁之后成为Owner线程，当锁对象调用wait后，此线程释放锁，进入Wait Set。当锁对象调用notify/notifyAll，会唤醒Wait Set中的一个或者全部线程，进入Entry Set。
@@ -963,14 +971,14 @@ synchronized锁存在四种状态：无锁状态、偏向锁状态、轻量级�
 
 ##### 偏向锁
 
-**使用场景**：只有一个线程进入临界区。比较理想的情况就是，一个线程消亡了之后，别的进程才来。
+**使用场景**：**只有一个线程进入临界区**。比较理想的情况就是，**一个线程消亡了之后，别的进程才来。**
 
 1. 获取锁：当线程尝试进入同步代码后，用CAS设置对象头中的MarkWord中的锁标志为偏向模式，并把线程id记录在对象头中。这个锁就偏向了这个线程，当这个线程再次进入同步区时，比较线程id一致后就无需加锁直接进入。也就是说线程**执行完同步代码后，不会释放锁**。
 2. 撤销锁：如果其他线程尝试获取锁，发现线程id和对象头中的id不一致。此时检查之前偏向的线程还是否存活，如果不存活就将锁设置为无锁状态，重新偏向新的线程。如果存活，表示对象锁被多个线程竞争，退出偏向模式，升级成轻量级锁。
 
 ##### 轻量级锁（自旋锁）
 
-**使用场景**：多个线程交替进入临界区。这种情况下几乎没有竞争，或者有轻微的竞争。通过短暂的忙等，去换取用户态内核态切换的开销。
+**使用场景**：多个线程交替进入临界区。这种情况下几乎没有竞争，或者有轻微的竞争。通过**短暂的忙等，去换取用户态内核态切换的开销**。
 
 主要的形式就是用CAS去尝试将锁标志的空闲状态改为锁定状态，如果成功了就将锁的持有者设置为自己。
 
@@ -992,15 +1000,6 @@ synchronized锁存在四种状态：无锁状态、偏向锁状态、轻量级�
 特点：不消耗CPU资源，但是会阻塞，阻塞会切换内核态，响应时间变慢。
 
 
-
-### synchronized和Lock的对比
-
-synchronized是java关键字，Lock是接口。Lock在类库层面实现同步，没有用到Synchronized，而是利用了volatile的可见性。都是可重用锁。
-
-- **释放锁方式**：synchronized同步区域的代码执行完毕就会自动释放锁退出同步区域。而Lock需要手动执行获取锁释放锁的操作。
-- **等待可中断**：获取synchronized锁的阻塞线程是不处理中断的。Lock中用tryLock(long time, TimeUnit unit)方法和lockInterruptibly()去尝试获取锁，在获取锁前是可以响应中断的。
-- **公平性**：synchronized是非公平的。Lock的一个实现类ReentranLock默认是非公平的，也可以指定为公平锁。指定为公平锁性能会下降。
-- **精准唤醒**：synchronized中调用锁的notify/notifyAll只能唤醒等待池中的一个或者所有线程。ReentranLock可以同时绑定多个Condition，Condition的await和signal只针对这个Condition。所以可以根据不同的Condition实例去await和signal，实现精准唤醒。
 
 
 
@@ -1160,18 +1159,19 @@ public class LazyMan {
 
 ### synchronized和Lock对比
 
+synchronized是java关键字，Lock是接口。Lock在类库层面实现同步，没有用到Synchronized，而是利用了volatile的可见性和CAS，包括自己定义的同步队列。都是可重用锁。
+
 - 都是可重入锁
 - synchronized是一个java关键字；Lock是一个接口，是api层面的锁。
-- synchronized不需要手动释放锁；Lock需要手动释放锁。
-- synchronized不可中断，除非抛出异常或者正常运行完成；Lock可中断：
-
+- **释放锁方式**：synchronized同步区域的代码执行完毕就会自动释放锁退出同步区域。而Lock需要手动执行获取锁释放锁的操作。
+- **等待可中断**：获取synchronized锁的阻塞线程是不处理中断的。Lock中用tryLock(long time, TimeUnit unit)方法和lockInterruptibly()去尝试获取锁，在获取锁前是可以响应中断的。
   - Lock：
 
     1. 用tryLock(long time, TimeUnit unit)方法尝试获取锁，优先响应中断再响应锁获取，可以设置超时参数。
 
     2. 用lockInterruptibly()去尝试获取锁，优先响应中断再响应所获取（就是说如果在获取锁的过程中进入阻塞，对他发起的中断它可以响应到，Thread.interrupt()可以发起中断。）。
-- synchronized是非公平锁；Lock两者都可，默认是非公平锁，传入参数true就为公平锁。
-- synchronized同步中wait()唤醒线程要么随机唤醒一个线程。要么唤醒全部线程；Lock可以通过把线程绑定到多个Condition中来实现分组唤醒需要唤醒的线程，可以精准唤醒。
+- **公平性**：synchronized是非公平的。Lock的一个实现类ReentranLock默认是非公平的，也可以指定为公平锁。指定为公平锁性能会下降。
+- **精准唤醒**：synchronized中调用锁的notify/notifyAll只能唤醒等待池中的一个或者所有线程。ReentranLock可以同时绑定多个Condition，Condition的await和signal只针对这个Condition。所以可以根据不同的Condition实例去await和signal，实现精准唤醒。
 
 ### Lock精准唤醒
 
@@ -1246,13 +1246,13 @@ class Data{
 
 AbstractQueuedSynchronizer，**抽象的队列同步器**，是一个抽象类，在java.util.concurrent.locks包下面。
 
-AQS是一个用来构建锁和同步器的框架，使用AQS能简单高效地个构造出应用广泛的大量的同步器。同步器面向的是锁的实现者，它简化了锁的实现方式，屏蔽了同步状态管理，线程排队等底层操作。比如ReentrantLock，Semaphore，ReentrantReadWriteLock，SynchronousQueue，FutureTask，等等都是基于AQS的。
+AQS是一个用来构建锁和同步器的框架，使用AQS能简单高效地个构造出应用广泛的大量的同步器。**同步器面向的是锁的实现者，它简化了锁的实现方式**，屏蔽了同步状态管理，线程排队等底层操作。比如ReentrantLock，Semaphore，ReentrantReadWriteLock，SynchronousQueue，FutureTask，等等都是基于AQS的。
 
-AQS是提供一些基础模板方法，模板方法中的有些小方法是需要开发者去实现的。比如说提供过acquire获取资源实现、acquireQueued进入同步队列实现、release释放资源实现等，而获取独占资源的tryAcquire需要开发者去自己实现，这些需要实现的方法会被框架中的模板方法调用，比如tryAcquire会被acquireQueued调用，acquire也会调用tryAcquire。
+AQS是提供一些基础**模板方法**，模板方法中的有些小方法是需要开发者去实现的。比如说提供acquire获取资源实现、acquireQueued进入同步队列实现、release释放资源实现等，而acquire中调用的获取独占资源的tryAcquire()需要开发者去自己实现。
 
-AQS中维护了一个 **volatile int state** 和一个**FIFO队列**（Node节点）
+AQS中维护了一个 表示同步的变量**volatile int state** 和一个**FIFO队列**（Node节点）
 
-state：代表同步状态，volatile保证多线程下的可见性，=1表示当前对象已经被占用，其他线程来加锁时则会失败。
+state：代表同步状态，volatile保证多线程下的可见性，>=1表示当前对象已经被占用，其他线程来加锁时则会失败。
 
 FIFO：多线程争用资源的线程会封装成node进入这个队列，队列后面的等待队首的释放资源。
 
@@ -1260,7 +1260,7 @@ FIFO：多线程争用资源的线程会封装成node进入这个队列，队列
 
 如果请求的共享资源**空闲**，则将请求资源的线程设置为有效的工作线程，将共享资源设置为锁定状态。
 
-如果请求的共享资源**被占用**，就会将这个线程封装成一个Node，插入（CAS）双向队列的尾部，然后这个线程进入阻塞状态等待被唤醒。
+如果请求的共享资源**被占用**，就会将这个线程封装成一个Node，插入（CAS）双向队列的尾部，然后这个线程找到合适的位置进入等待状态被唤醒。
 
 共享资源用volatile修饰。线程通过CAS去改变状态。没有成功获取就进入队列。
 
@@ -1330,7 +1330,7 @@ public final void acquire(int arg) {
 
 1. tryAcquire(arg)方法尝试去获取资源，如果成功直接返回
 2. addWaiter()方法将线程加入同步队列尾部，标记为独占模式
-3. acquireQueued()使线程进入等待状态，当轮到自己（被unpark）时尝试获取资源，一直等待获取到后才返回。当返回时如果在等待期间被中断过就返回true，否则返回false。
+3. acquireQueued()使线程在队列中的合适位置进入等待状态，当轮到自己（被unpark）时尝试获取资源，一直等待获取到后才返回。当返回时如果在等待期间被中断过就返回true，否则返回false。
 4. 对于在队列中阻塞过程发生的中断，会在获取资源后通过selfInterrupt()方法自我中断，补上。
 
 ![image-20201015230705017](Java并发.assets/image-20201015230705017.png)
@@ -1375,7 +1375,7 @@ private Node addWaiter(Node mode) {
 流程：
 
 1. 根据模式为当前线程构造节点，有独占和共享模式
-2. 尝试用CAS快速入队
+2. 尝试用CAS快速加入到队尾
 3. 失败后通过end方法入队
 
 ##### end()
@@ -1401,6 +1401,8 @@ private Node enq(final Node node) {
 ~~~
 
 自旋的尝试CAS加入队尾。
+
+没有初始化队列先初始化，一个空节点为头结点。
 
 
 
@@ -1438,9 +1440,9 @@ final boolean acquireQueued(final Node node, int arg) {
 
 1. 标记是否拿到资源，标记等待过程是否被中断过
 2. 开始自旋操作。这里循环指的是，线程如果进入等待后重新被唤醒了，接着尝试获取资源，不行就接着尝试进入等待。
-   1. 拿到前驱节点去判断，如果前驱是头结点（头结点获取了资源），那么作为老二就是去用tyAcquire去尝试获取资源。获取到后将head指向自己表示为头结点，把之前拿到的前驱节点引用p置为null，帮助gc。（）
-   2. 如果不是老二，或者没有获取到资源就表示自己可以先休息了，通过后方法内的park()方法进入等待状态，这个方法可以将哪些被中断的等待线程唤醒后发现拿不到资源继续park()等待。通过shouldParkAfterFailedAcquire()进入等待状态，配合parkAndCheckInterrupt()方法来标记是否有被中断。
-   3. 最后都要执行，也就是在finally中判断是否拿到资源，然后调用cancelAcquire()来取消节点在队列中的等待。
+   1. 拿到前驱节点去判断，如果前驱是头结点（头结点是不再使用的节点，只作为**虚拟头结点**，可能是开始创建的的空节点也可能是之前的节点完成了任务做了头结点），那么作为老二就是去用tyAcquire去尝试获取资源。获取到后将head指向自己表示为头结点，把之前拿到的前驱节点引用p置为null，帮助gc。
+   2. 如果不是老二，或者没有获取到资源就表示自己可以先休息了，通过后方法内的park()方法进入等待状态，这个方法可以将哪些被中断的等待线程唤醒后发现拿不到资源继续park()等待。通过shouldParkAfterFailedAcquire()在队列中找到合适的位置，配合parkAndCheckInterrupt()方法来进入等待状态，并且在唤醒后（被unpark()或者被中断）标记是否有被中断。如果有中断把状态保存到别的变量中。
+3. 最后都要执行，也就是在finally中判断是否拿到资源，然后调用cancelAcquire()来取消节点在队列中的等待。
 
 ##### shouldParkAfterFailedAcquire()
 
@@ -1498,7 +1500,7 @@ private final boolean parkAndCheckInterrupt() {
 流程：
 
 1. 使自己进入等待状态
-2. 醒来时返回自己的中断状态，并重置中断标记
+2. 醒来时返回自己的中断状态，并重置中断标记（必须重置，因为中断状态为true时park无法阻塞）
 
 #### release(int)
 
@@ -1755,7 +1757,7 @@ protected final boolean tryRelease(int releases) {
 
 FairSync类中的公平获取方法。这里面的getExclusiveOwnerThread()判断独占资源的线程是不是自己，体现了可重用性，如果独占线程是自己，就设置state接着+1。getExclusiveOwnerThread()是AQS中就实现的方法，来获取当前同步器的独占线程
 
-公平的关键方法：用aqs提供的hasQueuedPredecessors()，通过这个判断当前线程是不是阻塞队列的第一个。（所以线程获取锁必须要先进队列然后从队列中出来）
+公平的关键方法：用aqs提供的hasQueuedPredecessors()，通过这个判断当前线程是不是阻塞队列的第一个（不是队列中第一个返回true）。（所以线程获取锁必须要先进队列然后从队列中出来）
 
 ~~~java
 final void lock() {
@@ -1786,9 +1788,10 @@ protected final boolean tryAcquire(int acquires) {
 }
 ~~~
 
-如果资源状态为0就去判断是否有线程正在阻塞中，且通过CAS尝试改变state为1。如果成功了，就把当前线程设置为独占线程。
+- 如果资源状态为0就判断当前线程是阻塞队列中的第一个线程并且通过CAS尝试改变state为1。如果成功了，就把当前线程设置为独占线程。
+- 如果不为0，判断占用锁的线程是不是和自己是同一个线程，如果是同一个就可以继续占用，增加state返回true。如果不是一个线程就返回false。
 
-如果不为0，判断占用锁的线程是不是和自己是同一个线程，如果是同一个就可以继续占用，增加state返回true。如果不是一个线程就返回false。
+
 
 #### 非公平获取锁的tryAcquire(）
 
@@ -1827,14 +1830,6 @@ final boolean nonfairTryAcquire(int acquires) {
 ~~~
 
 通过CAS设置state为1，如果成功了就说明获取到了锁。非公平的获取中没有是否是队列第一个的这个判断。所以在释放锁通知队列第一个来获取锁的期间，可能有别的线程主动获取了锁。造成了不公平的现象。
-
-
-
-等待队列是一个双向链表，节点为Node。
-
-在链表为空的时候，创建第一个节点，使用CAS设置head指针，然后tail、t都指向第一个Node。在有了head之后，将线程作为节点放到head后面。通过addWaiter()返回线程对应的节点。然后执行acquireQueued(addWaiter(Node.EXCLUSIVE), arg)，先判断前置节点是否为head，如果是尝试加锁，成功后当前节点设为head节点，然后空置之前的head节点，方便回收。如果不是head，通过shouldParkAfterFailedAcquire设置Node的waitStatus，然后执行parkAndChecknIterrupt，**调用`LockSupport.park()`挂起当前线程。**
-
-使用LockSupport.park()将线程挂起。
 
 
 
@@ -2401,7 +2396,7 @@ public void run() {
 - **提高响应速度**。当任务到达时，不需要等待线程创建就能立刻执行。
 - **提高线程的可管理性**。可以进行线程的统一分配，调优和监控。
 
-线程池可以预先创建若干数量的线程，不能由用户直接对线程进行控制，在这个前提下，**可以通过线程的复用来减少开销。**也可以平缓过量任务。
+线程池可以预先创建若干数量的线程，不能由用户直接对线程进行控制，在这个前提下，**可以通过线程的复用来减少开销。**也可以平缓过量任务。线程和任务解耦。
 
 线程池接口主要方法：
 
@@ -2656,7 +2651,7 @@ getTask方法让线程从任务模块中不断地取任务执行。流程为：
 
 ![图6 获取任务流程图](Java并发.assets/49d8041f8480aba5ef59079fcc7143b996706.png)
 
-getTask进行多次判断，是为了控制线程的数量，符合线程池的状态。如果线程池不应该有那么多线程，就会返回null。工作线程Worker会不断地接收新任务去执行，而当工作线程Worker接收不到任务时，就会开始被回收。
+getTask进行多次判断，是为了控制线程的数量，符合线程池的状态。如果线程池不应该有那么多线程（线程数超过最大线程数，或者允许超时且任务队列空），就会返回null。工作线程Worker会不断地接收新任务去执行，而当工作线程Worker接收不到任务时，就会开始被回收。
 
 
 
@@ -2696,12 +2691,12 @@ Worker实现了Runnable接口，有一个**初始化的任务firstTask**——�
 
 **线程池通过一张Hash表去持有线程的引用，来控制线程的生命周期。**如何知道线程是否执行任务呢：
 
-Worker继承了AQS，**利用了AQS的独占锁+不可重入的特性来反应当前的执行状态。**
+Worker继承了AQS，**利用了AQS的独占锁+不可重入的特性来反应当前的执行状态。**Worker在执行任务时获取自己的锁来执行，所以当Worker的tryLock返回时说明Worker没有执行任务。
 
 - 获取了独占锁，表示当前线程正在执行中。如果正在执行，则不应该中断线程。
 - 如果不是独占锁状态，说明没有处理任务，这时可以对线程进行中断。
 
-线程池执行shutdown方法时会尝试中断空闲线程，**通过tryLock尝试获取线程独占状态来判断线程是否空闲**，如果空间就可以安全回收。
+线程池执行shutdown方法时会尝试中断空闲线程，**通过tryLock尝试获取线程独占状态来判断线程是否空闲**，如果空闲就可以安全回收。
 
 ![图8 线程池回收过程](Java并发.assets/9d8dc9cebe59122127460f81a98894bb34085.png)
 
@@ -2716,11 +2711,11 @@ Worker继承了AQS，**利用了AQS的独占锁+不可重入的特性来反应�
 
 #### Worker回收
 
-Worker销毁依赖于JVM的自动垃圾回收。线程池来维护符合要求的线程的引用，防止自动回收。对于想要回收的线程将其引用消除即可。
+Worker销毁依赖于JVM的自动垃圾回收。线程池来维护符合要求的线程的引用，防止自动回收。**对于想要回收的线程将其引用消除即可。**
 
 核心线程可以无限等待获取任务，非核心要限时获取任务。
 
-**当Worker无法获取任务**，即获取的任务为空时，循环会结束，**Worker会主动消除自身在线程池内的引用。**
+**当Worker无法获取任务**，即获取的任务为空时，循环会结束，**Worker会主动消除自身在线程池内的引用。**调用processWorkerExit方法获取全局锁把对应的worker从HashSet中移除
 
 
 
@@ -2833,9 +2828,9 @@ ThreadLocal类可以让**每个线程绑定自己的值**。线程通过ThreadLo
 
 场景：
 
-- 避免对象的多次传递。
+- 避免对象引用的多次传递。
 - 线程间的数据隔离，减少线程不安全的因素。
-- 进行事物操作时，用于存储线程事务信息。
+- 进行事务操作时，用于存储线程事务信息。
 - 数据库连接，Session会话管理。
 
 ~~~java
@@ -2916,15 +2911,19 @@ ThreadLocalMap是ThreadLocal的静态内部类，里面定义了Entry来保存�
 
 ### 原理总结
 
-每个Thread类对应一个ThreadLocalMap类型的变量，每个ThreadLocalMap（即threadLocals）可以存储多个ThreadLocal实例（都是属于本线程的），存储以ThreadLocal为key的键值对。ThreadLocal实例可以set值，可以获取值。ThreadLocal实例可以通过获取当前线程获取ThreadLocalMap类型变量，然后根据自身ThreadLocal实例作为key找到对应的值，这个值就是当前线程中这个ThreadLocal实例对应set存储的值。
+每个Thread类对应一个ThreadLocalMap类型的变量，每个ThreadLocalMap（即threadLocals）可以存储多个ThreadLocal实例为key的键值对（都是属于本线程的）。ThreadLocal实例可以set值，可以获取值。ThreadLocal实例可以通过获取当前线程获取ThreadLocalMap类型变量，然后根据自身ThreadLocal实例作为key找到对应的值，这个值就是当前线程中这个ThreadLocal实例对应set存储的值。
 
 ### 内存泄漏问题
 
 ThreadLocalMap使用的key是ThreadLocal的弱引用，而value是强引用。
 
-用弱引用是为了在线程不在引用key后，能够检测出这个键值对已经不再需要了。
+#### 为什么需要弱引用
 
-所以如果ThreadLocal**没有被外部强引用的情况下**，垃圾回收时，key会被清理掉，但是value不会被清理掉（引用value的必须是强引用，因为没有地方会再强引用他了）。这样ThreadLocalMap中出现key为null的Entry。假如我们不做任何措施，**value永远无法被GC回收**，就出现了内存泄漏。ThreadLocalMap视线中已经考虑了这种情况，在调用set()、get()、remove()方法的时候，会清理掉key为null的记录。使用完ThreadLocal方法后**最好手动调用remove()方法**。
+Entry类型的键值对中，ThreadLocal类型的key是弱引用，value是强引用。在**线程的执行任务中**持有着ThreadLocal引用。当线程任务方法执行完后引用就不存在了，对应的Entry中的key就会在gc时被清理。用弱引用是为了在线程不在引用key后，能够检测出这个键值对Entry已经不再需要了，就会做移除。
+
+
+
+所以如果ThreadLocal**没有被外部强引用的情况下**，垃圾回收时，key会被清理掉，但是value不会被清理掉（引用value的必须是强引用，因为没有地方会再强引用他了）。这样ThreadLocalMap中出现key为null的Entry。假如我们不做任何措施，**value永远无法被GC回收**，就出现了内存泄漏。ThreadLocalMap视线中已经考虑了这种情况，在调用set()、get()、remove()方法的时候，会清理掉key为null的记录。在任务方法中使用完ThreadLocal方法后**最好手动调用remove()方法**。
 
 ~~~java
 staticclass Entry extends WeakReference<ThreadLocal<?>> {
