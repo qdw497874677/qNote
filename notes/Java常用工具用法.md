@@ -14,6 +14,108 @@
 
 
 
+## 设计限流器
+
+## 简单限流
+
+
+
+
+
+## 漏斗
+
+整个限流过程就像是从一个漏斗中滴水，当如果漏斗满了就拒绝了。（只要能放入桶都立刻通过了，这里和现实中的漏斗过程还是有区别的）
+
+~~~java
+package com.qdw.springstudy.rateLimiter;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class NativeFunnelRateLimiter {
+
+    static class Cache extends LinkedHashMap<String, Funnel> {
+        private int max;
+        public Cache(int max){
+            super(16,0.75f);
+            this.max = max;
+        }
+
+        Funnel getFunnel(String key,int capacity,int quotaPreSec){
+            Funnel funnel = get(key);
+            if (funnel==null){
+                funnel = new Funnel(capacity,quotaPreSec);
+                put(key,funnel);
+            }
+            return funnel;
+        }
+
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, Funnel> eldest) {
+            return max<this.size();
+        }
+    }
+
+    static class Funnel{
+        // 漏斗总容量
+        int capacity;
+        // 流水频率，每毫秒通过的数量。一秒走一个的频率为1/1000
+        float leakingRate;
+        // 剩余配额
+        int leftQuota;
+        // 上次流水的时间
+        long leakingTs;
+        public Funnel(int capacity,int quotaPreSec){
+            this.capacity = capacity;
+            this.leakingRate = (float)quotaPreSec/1000;
+        }
+
+        void makeSpace(){
+            long curTs = System.currentTimeMillis();
+            long cha = curTs - leakingTs;
+            // 和上次之间的间隔时间中流走的水
+            int newQuota = (int) (cha * leakingRate);
+            System.out.println(newQuota);
+            if (newQuota>=1){
+                leftQuota += newQuota;
+                // 剩余空间最多不能超过总容量
+                leftQuota = Math.min(leftQuota, capacity);
+                leakingTs = curTs;
+            }else if(newQuota<0){// 说明时间太长了，肯定全流走了
+                leftQuota = capacity;
+            }
+            System.out.println("leftQuota:"+leftQuota);
+        }
+        boolean watering(int quota){
+            makeSpace();
+            if (leftQuota>=quota){
+                leftQuota -= quota;
+                return true;
+            }
+            return false;
+        }
+    }
+
+    private Cache cache;
+    public NativeFunnelRateLimiter(int max){
+        cache = new Cache(max);
+    }
+    public boolean isActionAllowed(String useId, String actionKey, int capacity,int quotaPreSec,int quota) {
+        Funnel funnel = cache.getFunnel(useId + actionKey,capacity,quotaPreSec);
+        return funnel.watering(quota);
+    }
+}
+
+~~~
+
+
+
+
+
+## 令牌桶
+
+和漏斗的思路相反。
+
 
 
 ## Cglib动态代理
