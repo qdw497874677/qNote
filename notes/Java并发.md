@@ -2681,7 +2681,7 @@ getTask进行多次判断，是为了控制线程的数量，符合线程池的�
 - ThreadPoolExecutor.AbortPolicy：丢弃任务并抛出RegectEdExecutionException异常。是线程池的默认拒绝策略。可以己时反馈状态，如果是比较关键的业务，推荐使用，可以及时发现问题。
 - ThreadPoolExecutor.DiscardPolicy：直接丢弃任务。无法发现异常，无关紧要的任务可以用。
 - ThreadPoolExecutor.DiscardOldestPolicy：丢弃队列最前面的任务，然后重新提交拒绝的任务。需要根据业务去判断丢弃老任务是否合适。
-- ThreadPoolExecutor.CallerRunsPolicy：让调用的线程处理任务。这种情况是需要让所有任务执行完毕，适合大量计算的任务类型，使用对线程是为了最大化吞吐量，必须让每个任务执行完。
+- ThreadPoolExecutor.CallerRunsPolicy：让调用的线程处理任务。这种情况是需要让所有任务执行完毕，适合大量计算的任务类型，使用对线程是为了最大化吞吐量，必须**让每个任务执行完**。
 
 
 
