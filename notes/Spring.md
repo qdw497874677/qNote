@@ -209,8 +209,8 @@ ClassPathXmlApplicationContext通过多次继承才继承到ApplicationContext �
 
 
 
-1. 准备工作：prepareRefresh()。记录容器启动时间，标记已启动状态，处理配置文件占位符等等。
-2. 加载配置。ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();配置的载体有xml文件、配置类、注解。将配置信息加载成BeanDefinition注册到容器容器中。还没有初始化。
+1. **准备工作**：prepareRefresh()。记录容器启动时间，标记已启动状态，处理配置文件占位符等等。
+2. **加载配置**。ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();配置的载体有xml文件、配置类、注解。**将配置信息加载成BeanDefinition注册到容器容器**中。还**没有初始化**。
    1. 这个注册就是向容器中的一个map中添加键值对，key是beanName，value是BeanDefinition对象。还有一个map保存别名到beanName的映射。
    2. 
 3. 注册和执行  **BeanFactory容器后处理器**  实例。在实例化单例之前执行的。开发者可以通过实现类拓展。
