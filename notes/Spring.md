@@ -419,9 +419,9 @@ Spring定义了7中传播行为。主要就是当一个事务方法去调用另�
 
 ### 区别
 
-过滤器（filter）依赖于servlet容器，是基于函数回调。只能对http请求进行拦截。关注web请求
+过滤器（filter）依赖于servlet容器，是**基于函数回调**。只能对http请求进行拦截。关注web请求
 
-拦截器（interceptor）依赖于SpringMVC，是基于反射机制，是aop的一种应用。只能对 Controller 的 HTTP 请求进行拦截。关注方法调用
+拦截器（interceptor）依赖于SpringMVC，是**基于反射机制**，是aop的一种应用。只能对 Controller 的 HTTP 请求进行拦截。关注方法调用
 
 过滤器在外，拦截器在内。
 
@@ -478,8 +478,6 @@ private void internalDoFilter(ServletRequest request,
   - preHandle：业务处理器处理请求完成之前
   - postHandle：业务处理器处理请求完成之后，可以处理ModelAndView
   - afterCompletion：在DispatcherServlet完全处理完之后被调用。顺序和preHandle的顺序相反，一个拦截器中的这两个方法就像是括号，把具体处理夹在中间。
-
-
 
 
 
