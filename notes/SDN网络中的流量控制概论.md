@@ -9,6 +9,17 @@
 
 ## SDN
 
+- 现象：
+  - 评价：
+
+- 说了这周会吃个饭，结果我一问才知道，奥牙疼，继续问奥，吃不了了。
+  - 我得一步一步，哪步没跟上就没答案了。你说话太虚了，没有谱。
+- 问个啥是回了一下，然后也就没了，我说十句有一句。
+  - 我不知道你现在是为啥这么冷淡，如果是不想说，那你之前我一直找你你也是这个样子。不管是谁都会觉得你没兴趣。然后你这人爱转移话题，模糊问题，模糊答案。
+  - 怎么能和你好：1，对方是一个你喜欢的不得了的，你巴不得主动爱。2，对方是个大舔狗，你怎么冷，他还是那么热，可能会感动你吧。
+
+你觉得你给人希望，又让人绝望，对方在这之间徘徊，很好吗。你会说不是你的问题。
+
 
 
 ### 分层
@@ -79,7 +90,13 @@ SDN提供了：
 
 
 
+进行一系列我看不懂的操作，但是很有用，不能跳过，跳过的话后面网页就会报404
 
+```java
+ git pull origin master 
+ git submodule init 
+ git submodule update 
+```
 
 
 
@@ -238,6 +255,62 @@ https://blog.csdn.net/u011470552/article/details/78282536
 
 
 
+- 说过这周吃饭，然后我问一点点地说，终于是问出来没法吃了。我想知道你是怎么想的。本来就不想吃，然后也懒得说，想着就稀里糊涂糊弄过去吗。然后回答个是，也就只字不提吃饭的事了。你的经典作风。我想咨询一下，这种情况你是怎么思考的。就是暗示我别再说这些事了是吗。
+- 跟你说话现在就是，比较吃力。倒是问啥回啥，你只关心你自己的东西。你说是不。没事说开了就很正常，你以前就总是这，还怪我不相信你，你总这样暗示我，我不明白你的意思不是很正常的。你其实也应该不太愿意理我，你不好意思理我，但是感觉偶尔你又给糖，我又感觉良好了。是我把太多东西当成糖了。
+- 我跟你确实是不合适，先不说喜好相反。都在一个地方上班也是不能走到一块的。我给不了你想要的还要自己受苦。虽然没有怎么在一起过，我还是不要脸的想说下，我放下你了，不是因为地点，因为形状不匹配我就不再白费力气了。
+- 感觉一般也就是遇到一个能包容自己的人。但是我觉得起码，多少能把自己的不足暴露出来点，然后才能去理解和包容。我有很多缺点我不否认，我为了对方我也会尽量克制，因为我不想让对方不高兴。
+- 想跟你说点心里话吧。反正我之前总是想找你。回看下之前的状态就是，我想表现对你的态度但是可能能力不足吧也就那，然后你就偶尔吧回应下，然后我接着从。
+- 我是不是感觉有点神经质。就想的特别多，之前你的所有行为我都琢磨。有的给我动力，有的又让我打退堂鼓，我就一直在猜你的想法，因为你基本上也不透露你的想法。
+
+### 专利
+
+#### 实例
+
+- 网络
+  - 3个节点
+  - 3个链路
+  - 
+- 请求
+  - 5个请求
+- 结果
+  - 最易完成单路径
+    - 0：[2]{0-1:**7**} [3]{0-1:**10** 0-2-1:**1**}
+    - 1：[3]{1-2:9} [4]{1-2:10 1-0-2:10} [5]{1-2:10 1-0-2:10} [6]{1-2:10 1-0-2:10} [7]{1-2:10 1-0-2:1}
+    - 2：[0]{0-2:10 0-1-2:10} [1]{0-2:8}
+    - 3：[1]{0-1:8}
+    - 4：[1]{1-2:10 1-0-2:2} [2]{1-2:10 1-0-2:3}
+  - 最易完成多路径
+    - 0：[2]{0-1:6 0-2-1:1} [3]{0-1:8 0-2-1:3}
+    - 1：[3]{1-2:7 1-0-2:2} [4]{1-2:9 1-0-2:9} [5]{1-2:9 1-0-2:9} [6]{1-2:9 1-0-2:9} [7]{1-2:9 1-0-2:8}
+    - 2：[0]{0-2:7 0-1-2:7} [1]{0-2:7 0-1-2:7}
+    - 3：[1]{0-1:6}
+    - 4：[0]{1-2:3 1-0-2:3} [1]{1-2:3 1-0-2:3} [2]{1-2:9 1-0-2:4}
+  - 全时隙LP
+    - 0：[3]{0-1:8} [4]{0-1:10}
+    - 1：[1]{1-0-2:4} [2]{1-2:5} [3]{1-2:10 1-0-2:2} [4]{1-2:10} [5]{1-2:10 1-0-2:9} [6]{1-2:10} [7]{1-2:10} [8]{1-2:10}
+    - 2：[0]{0-2:10} [1]{0-2:6} [2]{0-2:10} [3]{0-2:2}
+    - 3：[1]{0-1:6} [2]{0-1:10}
+    - 4：[0]{1-2:10} [1]{1-2:10} [2]{1-2:5}
+
+
+
+## 简历
+
+
+
+Xiaoyang Zhang received the M.S. degree in Communication and Information Systems from Northwest
+University of China in 2019 and the B.S. degree in
+Electronic Science and Technology from Xi’an University of Posts and Telecommunications of China
+in 2013. His research interests include bandwidth
+scheduling, high-performance networks, and big data
+management.
+
+
+
+Dawei Quan received the M.S. degree in Software Engineering from Northwest University of China in 2021 and the B.S. degree in Software Engineering from Northwest University of  China in 2018.His research interests include bandwidth scheduling, high-performance networks.
+
+
+
 ### 毕设思路
 
 整体约束：周期性调度、VBVP
@@ -281,7 +354,7 @@ https://blog.csdn.net/u011470552/article/details/78282536
 
   - 优先级更新
 
-  - **单时隙动态优先级周期性调度算法**
+  - **单时隙动最少剩余态优先级周期性调度算法**
 
     - （single slot dynamic priority periodic schedule，SSDPVBVP）
     - 利用周期性调度额外的信息，如果一个请求的在t、t+1两个时隙都可以传输，那么可以根据两个时隙的繁忙程度来改变两个时隙中请求的权重
@@ -290,15 +363,15 @@ https://blog.csdn.net/u011470552/article/details/78282536
 
     - 相比于离线场景，每个时隙少了很多信息，所以考虑的情况会少一些。
 
-- 全时隙线性规划
+- 线性规划
 
-  - 将多路径多时隙全部转换成线性规划方程来求解
-
-- 分时隙LP动态优先级算法
-
-  - 针对每一个时隙转为方程求解，减少了计算时间。
-  - **分时隙LP动态优先级周期性调度算法**
-  - **分时隙LP动态优先级即时调度算法**
+  - 成功率有所下降，总的数据传输率、吞吐量提升，计算时间增加
+  - 全时隙线性规划
+    - 将多路径多时隙全部转换成线性规划方程来求解
+  - 分时隙LP动态优先级算法
+    - 针对每一个时隙转为方程求解，减少了计算时间。
+    - **分时隙LP动态优先级周期性调度算法**
+    - **分时隙LP动态优先级即时调度算法**
 
 
 
@@ -312,6 +385,67 @@ https://blog.csdn.net/u011470552/article/details/78282536
 - 减少路径，降低路径的跳数，优化k路径
   - 删除最差的链路，对比和其他k路径算法 
   - 降低选过的链路的带宽，也就是降低走过的路的权重，但不是不能再走了
+- 如果是针对需要得是否能第一次就传输完成，怎么优化
+- **在离线情况下，怎么能让动态优先级策略利用上离线的优势。**
+- **单时隙方法中，某些请求不参与LP，比如到截止时间比较远的请求。**
+
+### 可能用的语句
+
+- 线性规划方法不只是去最大化在截止时间前完成传输的数量，因为此时全有或者全无的属性是难以在线性约束中去捕获的，但是其结果和最大化截止时间前完成传输的数量和数据数据传输率的结果是接近的。
+
+- **Applying solutions for intra-DC to inter-DC are insuffifi-**
+
+  **cient to ensure high WAN utilization.** The bandwidth guar
+
+  antee provided by virtual network abstractions [2, 6, 23], such
+
+  as the hose model, supports transfer deadlines by guarantee
+
+  ing minimum bandwidth. However, when applied to inter-DC
+
+  WAN, they are insuffificient to fully utilize the WAN band
+
+  width. The reason is that these pre-determined bandwidth
+
+  reservation models (either static [2, 6] or time-varying [23])
+
+  are less flflexible than the deadline based reservation. They
+
+  provide fifixed bandwidth guarantees over time while our de
+
+  sign focuses on guaranteeing the total transfer volume given a
+
+  deadline. Their models place a more stringent requirement at
+
+  the admission time, while our model is more flflexible because
+
+  the bandwidth allocation can change over time as long as
+
+  the total volume is delivered within the time limit. In our
+
+  evaluation (§8.3), we fifind that pre-determined bandwidth
+
+  reservations under-utilize the WAN resources, leaving many
+
+  transfer requests unsatisfified.
+
+- 
+
+
+
+- 1：11111
+- 2：111111
+- 3：11
+- 4：111111
+- 5：11111111
+- 6：1111
+- 7：1
+- 8：1111
+- 9：111111
+
+
+
+- 观察型、给予型、浪漫型、调停型
 
 #### 实验
 
