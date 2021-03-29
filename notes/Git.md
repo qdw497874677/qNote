@@ -73,6 +73,9 @@ git config --system --list
 ~~~bash
 git config --global user.name "qdw497874677"
 git config --global user.email 497874677@qq.com
+
+git config --global user.name "quandawei"
+git config --global user.email quandawei@kanzhun.com
 ~~~
 
 查看全局配置，只是用于当前登录用户的配置，C:\Users\qdw49\.gitconfig
@@ -464,7 +467,7 @@ git push -u origin 分支名
 
 之后对本地仓库的提交之后，就可以直接push推到远程仓库
 
-强制推送到远程
+## 强制推送到远程（！！！）
 
 ~~~bash
 git push -f origin master
