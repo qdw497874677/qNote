@@ -860,7 +860,7 @@ public class Test7 {
 
 ### synchronized
 
-synchronized是Java关键字，**解决多个线程之间访问资源的同步性**，可以保证被它修饰的方法或者代码块在**任意时刻只能有一个线程执行**。synchronized 代码块使用一对儿 monitorenter/monitorexit 指令来获取和释放对象的Monitor，**Monitor 对象是同步的基本实现单元**
+synchronized是Java关键字，**解决多个线程之间访问资源的同步性**，可以保证被它修饰的方法或者代码块在**同时只能有一个线程在其中**。synchronized 代码块使用一对儿 monitorenter/monitorexit 指令来获取和释放对象的Monitor，**Monitor 对象是同步的基本实现单元**
 
 
 
@@ -923,13 +923,13 @@ java中每一个对象都可以作为锁。
 
 多个线程同时请求某个对象监视器时，**对象监视器**会设置几种状态来区分请求的线程。
 
-- 阻塞队列
+- 阻塞队列（等待池）：
   - Contention List：所有请求锁的线程将首先放置到该竞争队列。
     - 是一个后进先出队列。
   - Entry List：Contention List中那些有资格成为候选人的线程被移到Entry List。
     - 引入这个是为了降低对Contention List尾部的竞争。
     - Owner线程会在unlock时，把Contention List中线程迁移到Entry List，并且执行Entry List中一个线程为OnDeck线程，即就绪的线程。Owner线程释放锁后，把竞争锁的权利交给OnDeck线程。不保证OnDeck抢到锁，牺牲了公平性，提高了吞吐量。
-- 等待队列：
+- 等待队列（锁池）：
   - Wait Set：放置调用wait方法被阻塞的线程（进入waiting状态）
     - OnDeck线程获取锁之后成为Owner线程，当锁对象调用wait后，此线程释放锁，进入Wait Set。当锁对象调用notify/notifyAll，会唤醒Wait Set中的一个或者全部线程，进入Entry Set。
 - OnDeck：表示下一个能竞争到锁的线程。只能有一个。
