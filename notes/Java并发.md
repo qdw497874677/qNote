@@ -905,7 +905,7 @@ java中每一个对象都可以作为锁。
 
 ##### 同步代码
 
-对象头会关联一个monnitor对象。
+**对象头会关联一个monnitor对象**。
 
 - 当进入同步代码时，执行**monitorenter**，就获取想要同步的对象的所有权，这时monitor的进入数+1，这个线程就是这个monitor的拥有者。
 - 如果你已经是这个monitor的拥有者了，再次进入会把进入数再+1
@@ -980,9 +980,9 @@ synchronized锁存在四种状态：无锁状态、偏向锁状态、轻量级�
 
 **使用场景**：多个线程交替进入临界区。这种情况下几乎没有竞争，或者有轻微的竞争。通过**短暂的忙等，去换取用户态内核态切换的开销**。
 
-主要的形式就是用CAS去尝试将锁标志的空闲状态改为锁定状态，如果成功了就将锁的持有者设置为自己。
+主要的形式就是用CAS去尝试将锁标志的**空闲状态改为锁定状态**，如果成功了就将锁的持有者设置为自己。
 
-1. 获取锁：线程进入同步区域，如果没有锁定，线程把锁对象的Mark Word拷贝到自己栈帧中新创建的锁记录空间里。然后用CAS对象头中的MarkWord替换为指向栈帧中锁记录的指针（这个线程就成了锁的持有者）。没有成功就自旋再次尝试修改
+1. 获取锁：线程进入同步区域，如果没有锁定，线程把**锁对象的Mark Word拷贝到自己栈帧中**新创建的锁记录空间里。然后用CAS对象头中的MarkWord替换为指向栈帧中锁记录的指针（这个线程就成了锁的持有者）。没有成功就自旋再次尝试修改
 2. 解锁：自旋重试多次后（默认10次），如果都失败了，说明对于同步代码是有竞争的，就升级为重量级锁，修改锁标记位。
 
 - 锁消除
@@ -1171,7 +1171,7 @@ synchronized是java关键字，Lock是接口。Lock在类库层面实现同步�
 
     2. 用lockInterruptibly()去尝试获取锁，优先响应中断再响应所获取（就是说如果在获取锁的过程中进入阻塞，对他发起的中断它可以响应到，Thread.interrupt()可以发起中断。）。
 - **公平性**：synchronized是非公平的。Lock的一个实现类ReentranLock默认是非公平的，也可以指定为公平锁。指定为公平锁性能会下降。
-- **精准唤醒**：synchronized中调用锁的notify/notifyAll只能唤醒等待池中的一个或者所有线程。ReentranLock可以同时绑定多个Condition，Condition的await和signal只针对这个Condition。所以可以根据不同的Condition实例去await和signal，实现精准唤醒。
+- **精准唤醒**：synchronized中调用锁的notify/notifyAll只能唤醒等待池中的随机一个或者所有线程。ReentranLock可以同时绑定多个Condition，Condition的await和signal只针对这个Condition。所以可以根据不同的Condition实例去await和signal，实现精准唤醒。
 
 ### Lock精准唤醒
 
@@ -1246,11 +1246,11 @@ class Data{
 
 AbstractQueuedSynchronizer，**抽象的队列同步器**，是一个抽象类，在java.util.concurrent.locks包下面。
 
-AQS是一个用来构建锁和同步器的框架，使用AQS能简单高效地个构造出应用广泛的大量的同步器。**同步器面向的是锁的实现者，它简化了锁的实现方式**，屏蔽了同步状态管理，线程排队等底层操作。比如ReentrantLock，Semaphore，ReentrantReadWriteLock，SynchronousQueue，FutureTask，等等都是基于AQS的。
+AQS是一个用来构建同步器的框架，使用AQS能简单高效地个构造出应用广泛的大量的同步器。**同步器面向的是锁的实现者，它简化了锁的实现方式**，屏蔽了同步状态管理，线程排队等底层操作。比如ReentrantLock，Semaphore，ReentrantReadWriteLock，SynchronousQueue，FutureTask，等等都是基于AQS的。
 
 AQS是提供一些基础**模板方法**，模板方法中的有些小方法是需要开发者去实现的。比如说提供acquire获取资源实现、acquireQueued进入同步队列实现、release释放资源实现等，而acquire中调用的获取独占资源的tryAcquire()需要开发者去自己实现。
 
-AQS中维护了一个 表示同步的变量**volatile int state** 和一个**FIFO队列**（Node节点）
+AQS中维护了一个 表示同步状态的变量**volatile int state** 和一个**FIFO队列**（Node节点）
 
 state：代表同步状态，volatile保证多线程下的可见性，>=1表示当前对象已经被占用，其他线程来加锁时则会失败。
 
@@ -1260,7 +1260,7 @@ FIFO：多线程争用资源的线程会封装成node进入这个队列，队列
 
 如果请求的共享资源**空闲**，则将请求资源的线程设置为有效的工作线程，将共享资源设置为锁定状态。
 
-如果请求的共享资源**被占用**，就会将这个线程封装成一个Node，插入（CAS）双向队列的尾部，然后这个线程找到合适的位置进入等待状态被唤醒。
+如果请求的共享资源**被占用**，就会将这个线程封装成一个Node，插入（CAS）双向队列的尾部，然后这个线程找到合适的位置进入等待状态，等待被唤醒。
 
 共享资源用volatile修饰。线程通过CAS去改变状态。没有成功获取就进入队列。
 
@@ -1310,7 +1310,7 @@ waitStatus的状态包括：
 
 ### 等待队列
 
-和一个Condition对象绑定。一个Condition对象去调用await方法，当前线程进入这个condition的等待队列中，然后释放锁。一个Condition对象去调用signal方法，会将对待队列里面的第一个waiter转移到同步队列。
+和一个Condition对象绑定。一个Condition对象去调用await方法，当前线程进入这个condition的等待队列中，然后释放锁。调用Condition对象的signal方法，会将对待队列里面的第一个waiter转移到同步队列。
 
 ### 独占模式
 
@@ -1439,9 +1439,9 @@ final boolean acquireQueued(final Node node, int arg) {
 流程：
 
 1. 标记是否拿到资源，标记等待过程是否被中断过
-2. 开始自旋操作。这里循环指的是，线程如果进入等待后重新被唤醒了，接着尝试获取资源，不行就接着尝试进入等待。
+2. 开始循环操作。这里循环指的是，线程如果进入等待后重新被唤醒了，接着尝试获取资源，不行就接着尝试进入等待。
    1. 拿到前驱节点去判断，如果前驱是头结点（头结点是不再使用的节点，只作为**虚拟头结点**，可能是开始创建的的空节点也可能是之前的节点完成了任务做了头结点），那么作为老二就是去用tyAcquire去尝试获取资源。获取到后将head指向自己表示为头结点，把之前拿到的前驱节点引用p置为null，帮助gc。
-   2. 如果不是老二，或者没有获取到资源就表示自己可以先休息了，通过后方法内的park()方法进入等待状态，这个方法可以将哪些被中断的等待线程唤醒后发现拿不到资源继续park()等待。通过shouldParkAfterFailedAcquire()在队列中找到合适的位置，配合parkAndCheckInterrupt()方法来进入等待状态，并且在唤醒后（被unpark()或者被中断）标记是否有被中断。如果有中断把状态保存到别的变量中。
+   2. 如果不是老二，或者没有获取到资源就表示自己可以先休息了，通过后方法内的park()方法进入等待状态（park后的线程在被中断后，标记改变，但是继续等待），这个方法可以将那些**被中断的等待线程唤醒后发现拿不到资源继续park()等待**。通过shouldParkAfterFailedAcquire()在队列中找到合适的位置，配合parkAndCheckInterrupt()方法来进入等待状态，并且在唤醒后（被unpark()或者被中断）标记是否有被中断。如果有中断把状态保存到别的变量中。
 3. 最后都要执行，也就是在finally中判断是否拿到资源，然后调用cancelAcquire()来取消节点在队列中的等待。
 
 ##### shouldParkAfterFailedAcquire()
@@ -1732,7 +1732,7 @@ private void doReleaseShared() {
 
 ### ReentrantLock的实现
 
-ReentrantLock内部定义了一个抽象类**Sync**，实现了具体的tryRelease()方法，但是没有实现tryAcquire()方法。后面又定义了Sync的子类**FairSync**和**NonfairSync**两个类。
+ReentrantLock内部定义了一个抽象类**Sync**，实现了具体的tryRelease()方法，但是没有实现tryAcquire()方法。后面又定义了Sync的子类**FairSync**和**NonfairSync**两个类，在这个两个类中实现了tryAcquire()，可重用锁就是使用这里的tryAcquire()。
 
 #### 公共的tryRelease()实现
 
@@ -1788,8 +1788,10 @@ protected final boolean tryAcquire(int acquires) {
 }
 ~~~
 
-- 如果资源状态为0就判断当前线程是阻塞队列中的第一个线程并且通过CAS尝试改变state为1。如果成功了，就把当前线程设置为独占线程。
-- 如果不为0，判断占用锁的线程是不是和自己是同一个线程，如果是同一个就可以继续占用，增加state返回true。如果不是一个线程就返回false。
+- 如果资源状态为0
+  - 判断当前线程是**阻塞队列中的第一个线程**并且通过CAS尝试改变state为1。如果成功了，就把当前线程设置为独占线程。
+- 如果不为0
+  - 判断占用锁的线程是不是和自己是**同一个线程**，如果是同一个就可以继续占用，增加state返回true。如果不是一个线程就返回false。
 
 
 
