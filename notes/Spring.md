@@ -40,6 +40,30 @@ IOC初始化过程：
 - FactoryBean：是一个工厂Bean，使用工厂方法模式。作用是作为生产某种Bean的工厂，提供Bean的实例化的逻辑。这个接口由BeanFactory中配置的对象实现，这些对象实现了FactoryBean接口，就表示自己为生产某种Bean实例的工厂。
 - ApplicationContext：是BeanFactory的子接口，拓展了功能，如提供国际化，统一的资源文件读取方式，事件传播，应用层特别配置等。
 
+## 依赖注入
+
+依赖注入就是给对象中的类型属性赋值。
+
+四种依赖注入方式
+
+### 构造方法注入
+
+
+
+### set方法注入
+
+
+
+### 自动装配
+
+
+
+### 注解
+
+
+
+
+
 
 
 ## Bean的作用域
@@ -211,7 +235,7 @@ ClassPathXmlApplicationContext通过多次继承才继承到ApplicationContext �
 
 1. **准备工作**：prepareRefresh()。记录容器启动时间，标记已启动状态，处理配置文件占位符等等。
 2. **加载配置**。ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();配置的载体有xml文件、配置类、注解。**将配置信息加载成BeanDefinition注册到容器容器**中。还**没有初始化**。
-   1. 这个注册就是向容器中的一个map中添加键值对，key是beanName，value是BeanDefinition对象。还有一个map保存别名到beanName的映射。
+   1. 这个注册就是向容器中的一个map中添加键值对，**key是beanName，value是BeanDefinition对象**。还有一个map保存别名到beanName的映射。
    2. 
 3. 注册和执行  **BeanFactory容器后处理器**  实例。在实例化单例之前执行的。开发者可以通过实现类拓展。
    1. 注册：postProcessBeanFactory(beanFactory);
@@ -224,7 +248,7 @@ ClassPathXmlApplicationContext通过多次继承才继承到ApplicationContext �
 6. 初始化当前 ApplicationContext 的事件广播器：initApplicationEventMulticaster();
 7. 初始化一些特殊bean：onRefresh();在初始化单例bean之前。
 8. 注册事件监听器：registerListeners();监听器需要实现 ApplicationListener 接口
-9. 初始化所有单例bean：finishBeanFactoryInitialization(beanFactory);懒加载的除外。
+9. **初始化所有单例bean**：finishBeanFactoryInitialization(beanFactory);懒加载的除外。
 10. 广播事件，初始化完成：finishRefresh();
 
 
@@ -419,7 +443,7 @@ Spring定义了7中传播行为。主要就是当一个事务方法去调用另�
 
 ### 区别
 
-过滤器（filter）依赖于servlet容器，是**基于函数回调**。只能对http请求进行拦截。关注web请求
+过滤器（filter）依赖于servlet容器，是**基于函数回调**。能对http请求的整个流程进行拦截。关注web请求
 
 拦截器（interceptor）依赖于SpringMVC，是**基于反射机制**，是aop的一种应用。只能对 Controller 的 HTTP 请求进行拦截。关注方法调用
 
@@ -430,7 +454,7 @@ Spring定义了7中传播行为。主要就是当一个事务方法去调用另�
 ### 使用
 
 - 编写过滤器类
-  - 实现filter，在doFilter方法中调用filterChain的doFilter来让继续责任链。调用过滤器链之前是前处理，之后为后处理。
+  - 实现filter，重写doFilter方法，在doFilter方法中调用filterChain的doFilter，让过滤链继续调用下一个filter。每个filter中的调用过滤链之前的代码是前处理，之后为后处理。
 - 注册过滤器bean
   - xml
   - 注解
@@ -457,9 +481,9 @@ private void internalDoFilter(ServletRequest request,
 ~~~
 
 - 用int类型的pos表示当前执行的filter数量，并且获取对应位置的filter
-- 调用filter中的doFilter，同时在doFilter中递归调用ApplicationFilterChain的doFilter，这样不断把把filter中doFilter前的代码执行完。
-- 当判断过滤器全部执行过后，调用service，执行后面的servlet的工作
-- 当service执行完后，每个过滤器递归返回，将doFilter后面的代码执行完，filter就全部执行完了。
+- **调用filter中的doFilter，同时在doFilter中递归调用ApplicationFilterChain的doFilter**，这样不断把filter中doFilter前的代码执行完。
+- **当判断过滤器全部执行过后，调用service**，执行后面的servlet的工作
+- **当service执行完后，每个过滤器递归返回**，将doFilter后面的代码执行完，filter就全部执行完了。
 
 
 
