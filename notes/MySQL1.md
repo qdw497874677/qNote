@@ -1149,7 +1149,9 @@ limit 100;
 - 每次记录最大id：每次查询记录最大的id，下一页直接从最大id开始查指定数目的数据。只适用于查询有顺序的字段。
 - in获取id：通过子查询的方式先获取所有的id，然后根据id查找分页。
 - join+覆盖索引：子查询根据条件和limit查询到所有数据的主键id。然后根据id和原表进行join。对于子查询的where条件进行覆盖索引的处理。
-  - 例如：select * from table_name inner join ( select id from table_name where user = ‘qdw’ limit 10000,10) b using (id)
+  - 例如：
+    - 优化前：select * from table_name where user = ‘qdw’ limit 10000,10
+    - 优化后：select * from table_name inner join ( select id from table_name where user = ‘qdw’ limit 10000,10) using (id)
   - 创建索引：alter table test add index idx_user_id(user, id)将where 放第一位，limit用到的主键放第2位，而且只能select 主键！
 
 总结：**把联表查询拆成，主表通过子查询返回的主键过滤，只对子查询做limit（需要排序只针对子查询），子查询查出主键id。**相当于利用覆盖查询
