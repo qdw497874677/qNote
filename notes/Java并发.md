@@ -149,7 +149,7 @@ instance = memory;//3.设置instance指向刚分配的内存地址，此时insta
 
 > 步骤2和步骤3不存在数据依赖关系，这种指令重排处理器是允许的。
 >
-> 当一个线程读取到instance不为null时，实际上这个实例还没有完成初始化，就产生了线程安全问题。
+> **当一个线程读取到instance不为null时，实际上这个实例还没有完成初始化**，就产生了线程安全问题。
 >
 > 所以对这个实例的引用变量加volatile。
 
@@ -282,7 +282,7 @@ volatile修饰符适用于以下场景：某个属性被多个线程共享，其
 
 - sleep：当前线程进入休眠，**交出CPU，但是不释放锁**。sleep可以在任意区域调用，进入的是TIMED-WAITING状态。
 - yiled：使当前线程让出CPU，给优先级相同或更高的线程，回到RUNNABLE状态，重新竞争CPU时间片。和sleep类似**不会释放锁**。
-- join：当前线程阻塞直到被调用join的线程运行终止。**底层使用wait，也会释放锁**。锦灯WAITING状态。
+- join：当前线程阻塞直到被调用join的线程运行终止。**底层使用wait，也会释放锁**。进入WAITING状态。
   - join方法是用synchronized以目标线程作为锁对象。A线程调用B线程的join：A进入同步状态**以线程B作为锁对象**，判断B处于运行状态后**调用wait**阻塞当前进入同步区域的线程。**由于线程终止时会调用自己的notifyAll()方法，唤醒所有以自己为锁的在等待的线程。**当B执行完终止后，唤醒处于等待状态的A线程。
 - interrupt()：设置线程的中断标志位。要看线程去怎么处理中断标志。
   - 如果线程通过sleep、wait、join处于等待状态，那么线程会**定期检查中断位是否为true**，会在这些方法中抛出IntrruptedException异常，并在抛出异常后重置中断位为false。
@@ -422,7 +422,7 @@ public class Test4 {
 }
 ~~~
 
-
+也可以用volatile的变量来表示是否还可以执行。
 
 
 
@@ -923,13 +923,13 @@ java中每一个对象都可以作为锁。
 
 多个线程同时请求某个对象监视器时，**对象监视器**会设置几种状态来区分请求的线程。
 
-- 阻塞队列（等待池）：
+- 阻塞队列（锁池）：
   - Contention List：所有请求锁的线程将首先放置到该竞争队列。
     - 是一个后进先出队列。
   - Entry List：Contention List中那些有资格成为候选人的线程被移到Entry List。
     - 引入这个是为了降低对Contention List尾部的竞争。
     - Owner线程会在unlock时，把Contention List中线程迁移到Entry List，并且执行Entry List中一个线程为OnDeck线程，即就绪的线程。Owner线程释放锁后，把竞争锁的权利交给OnDeck线程。不保证OnDeck抢到锁，牺牲了公平性，提高了吞吐量。
-- 等待队列（锁池）：
+- 等待队列（等待池）：
   - Wait Set：放置调用wait方法被阻塞的线程（进入waiting状态）
     - OnDeck线程获取锁之后成为Owner线程，当锁对象调用wait后，此线程释放锁，进入Wait Set。当锁对象调用notify/notifyAll，会唤醒Wait Set中的一个或者全部线程，进入Entry Set。
 - OnDeck：表示下一个能竞争到锁的线程。只能有一个。
@@ -998,8 +998,6 @@ synchronized锁存在四种状态：无锁状态、偏向锁状态、轻量级�
 使用场景：多个线程同时进入临界区
 
 特点：不消耗CPU资源，但是会阻塞，阻塞会切换内核态，响应时间变慢。
-
-
 
 
 
@@ -1996,10 +1994,6 @@ semaphore.release();
 
 
 
-
-
-
-
 ## 阻塞队列
 
 > 首先是一个队列。
@@ -2562,7 +2556,7 @@ ThreadPoolExecutor(int corePoolSize,
 
 ### ctl
 
-成员变量 ctl 是个 Integer 的原子变量用来记录线程池状态 和 线程池中线程个数。高三位表示线程状态，后面29位记录线程池个数
+成员变量 ctl 是个 Integer 的原子变量用来记录线程池状态 和 线程池中线程个数。高三位表示线程状态，后面29位记录线程个数
 
 ### mainLock
 
@@ -2917,15 +2911,17 @@ ThreadLocalMap是ThreadLocal的静态内部类，里面定义了Entry来保存�
 
 ### 内存泄漏问题
 
-ThreadLocalMap使用的key是ThreadLocal的弱引用，而value是强引用。
+ThreadLocalMap持有的key（ThreadLocal）的弱引用，在每次垃圾回收时都会被清理，持有value的强引用。
+
+当引用key的强引用没有了，则ThreadLocal会在下一次回收时被清除，而在没有执行ThreadLocalMap的set、get、remove情况下，TLM一直持有value的强引用，导致内存泄漏。
+
+所以在线程方法中创建完TL后使用完，最好手动remove()。
 
 #### 为什么需要弱引用
 
-Entry类型的键值对中，ThreadLocal类型的key是弱引用，value是强引用。在**线程的执行任务中**持有着ThreadLocal引用。当线程任务方法执行完后引用就不存在了，对应的Entry中的key就会在gc时被清理。用弱引用是为了在线程不在引用key后，能够检测出这个键值对Entry已经不再需要了，就会做移除。
+Entry类型的键值对中，ThreadLocal类型的key是弱引用，value是强引用，也就是说TLM持有key的弱引用，持有value的强引用。在**线程的执行任务中**持有着ThreadLocal的强引用。当线程任务方法执行完后引用就不存在了，也就是说TL没有外部引用了，ThreadLocal就会在gc时被清理。用弱引用是为了在线程任务方法中不在引用key后，能够**检测出这个键值对Entry已经不再需要**了（其他ThreadLocal调用TLM中的set、get、remove），就会做移除。
 
-
-
-所以如果ThreadLocal**没有被外部强引用的情况下**，垃圾回收时，key会被清理掉，但是value不会被清理掉（引用value的必须是强引用，因为没有地方会再强引用他了）。这样ThreadLocalMap中出现key为null的Entry。假如我们不做任何措施，**value永远无法被GC回收**，就出现了内存泄漏。ThreadLocalMap视线中已经考虑了这种情况，在调用set()、get()、remove()方法的时候，会清理掉key为null的记录。在任务方法中使用完ThreadLocal方法后**最好手动调用remove()方法**。
+如果为强引用，则在没有手动删除ThreadLocal后，他会一直在线程的TLM中，有更大可能导致内存泄漏。
 
 ~~~java
 staticclass Entry extends WeakReference<ThreadLocal<?>> {
@@ -2941,9 +2937,18 @@ staticclass Entry extends WeakReference<ThreadLocal<?>> {
 
 
 
-#### 案例
+#### 实践
 
-SimpleDateFormat产生的实例是单例，在多线程情况下会有线程安全问题。可以在ThreadLocal中去创建来解决线程安全问题。
+三种使用TL的场景
+
+- 需要存储线程私有变量
+  - 创建线程内的私有变量
+- 实现线程安全
+  - SimpleDateFormat产生的实例是单例，在多线程情况下会有线程安全问题。可以在ThreadLocal中去创建来解决线程安全问题。
+- 需要减少线程资源竞争
+  - 为每个线程单独生成一份资源
+
+
 
 
 

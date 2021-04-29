@@ -247,7 +247,55 @@ Exception in thread "main" java.lang.NullPointerException
 
 ## 泛型
 
-泛型就是参数化的类型
+泛型就是参数化的类型。通过泛型来进行参数类型的限制
+
+三种用法
+
+### 泛型类
+
+创建实例时，可以传入泛型类型，也可以不传入。传入泛型类型可以起到限制的作用
+
+~~~java
+public class Generic<T>{
+    private T key;
+}
+~~~
+
+
+
+
+
+### 泛型接口
+
+~~~java
+public interface Generator<T>{
+    public T next();
+}
+class AGenerator<T> implements Generator<T>{
+    @Override
+    public T next(){
+        return null;
+    }
+}
+~~~
+
+
+
+### 泛型方法
+
+泛型类，是在实例化类的时候指明泛型的具体类型；泛型方法，是在调用方法的时候指明泛型的具体类型。
+
+~~~java
+    public <T> T showKeyName(Generic<T> container){
+        System.out.println("container key :" + container.getKey());
+        T test = container.getKey();
+        return test;
+    }
+~~~
+
+
+
+
 
 ## （！！！待完成）JDK1.8新特性
 
