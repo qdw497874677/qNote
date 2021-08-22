@@ -250,6 +250,74 @@ students属性的类型为List<Student>
 
 
 
+~~~java
+    <resultMap id="ProductAttr" type="com.mi.sc.sop.model.Product">
+        <result property="productCode" column="productCode"/>
+        <result property="productName" column="productName"/>
+        <!--        集合要用collection，用ofType表示集合中的类型-->
+        <collection property="attrVals" ofType="com.mi.sc.sop.model.AttributeVal">
+            <result property="attrId" column="sid"/>
+            <result property="attrCode" column="attrCode"/>
+            <result property="attrValCode" column="attrValCode"/>
+        </collection>
+    </resultMap>
+
+<!--    <select id="listProduct2" resultType="com.mi.sc.sop.model.Product">-->
+    <select id="listProduct2" resultMap="ProductAttr">
+        SELECT
+            product.id pid,
+            product.product_code productCode,
+            product.product_name productName,
+            product.service_line_id serviceLineId,
+            product.STATUS,
+            product.delete_reason deleteReason,
+            product.create_time createTime,
+            product.create_user createUser,
+            product.update_time updateTime,
+            product.update_user updateUser,
+            sa.attr_id attrId,
+            sa.attr_code attrCode,
+            attrval.attr_val_name attrValCode
+        FROM
+-- 	sc_product product
+            <choose>
+                <when test="page != null and page.thisPage != null and page.pageSize != null">
+                    (SELECT * FROM sc_product WHERE
+                    <if test="query.serviceLineId!=null">
+                        AND sc_product.service_line_id=#{query.serviceLineId}
+                    </if>
+                    AND sc_product.tenant_code = '1' 
+                    LIMIT #(query.page.startNumber), #(query.page.pageSize)) product
+                </when>
+                <otherwise> sc_product sp </otherwise>
+            </choose>
+    LEFT JOIN sc_product_attr_val_rela rela ON product.id = rela.product_id
+    AND rela.tenant_code = '1'
+    LEFT JOIN sc_attribute_val attrval ON rela.attr_val_id = attrval.id
+    AND attrval.tenant_code = '1'
+    LEFT JOIN sc_attribute sa ON sa.id = attrval.attr_id
+    AND sa.tenant_code = '1'
+    LEFT JOIN sc_product ON sc_product.id = product.id
+        WHERE
+            1 = 1
+        <if test="query.appendSql!=null">
+            ${query.appendSql}
+        </if>
+          AND product.service_line_id = 1
+          AND product.tenant_code = '1'
+-- 	AND product.id IN ( SELECT id FROM sc_product WHERE sc_product.service_line_id = 1 AND sc_product.tenant_code = '1' LIMIT 20, 10 )
+    </select>
+
+~~~
+
+
+
+
+
+
+
+
+
 # 动态SQL
 
 可以根据条件动态的拼接sql语句

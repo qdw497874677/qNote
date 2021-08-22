@@ -392,13 +392,43 @@ git cherry-pick git cherry-pick 2555c6e
 
 
 
+## 暂存修改
+
+git status：查看工作区文件状态，列出已经修改的文件
+
+git stash save ‘自定义描述’ ：暂存工作区的文件
+
+git stash list：查看所有暂存列表
+
+git stash pop：恢复暂存的文件，直接将最近一次 stash 的代码pop出来并删除stash记录，还原到stash隐藏之前
+
+git stash apply id：恢复暂存的文件，和git stash pop功能一样，先通过git stash list找到记录编号，通过编号id恢复。区别在于git stash apply id不会删除stash记录。
+
+
+
+IDEA 也可以用可视化界面直接操作：右键project > git > repository
+
+![image](https://img-blog.csdnimg.cn/img_convert/7bedd88d691ff47d0906825bb9c0fa24.png)
+
+
+
+拓展：找回清除的 stash 数据
+
+我们能将代码暂存起来，当然也能将暂存区的数据删除，如果在没有恢复暂存代码的时候不小心将暂存区的数据删除了该怎么吧？
+
+只需要用这句命令即可：
+
+git log --graph --oneline --decorate $( git fsck --no-reflog | awk ‘/dangling commit/ {print $3}’)
+
+找到对应的 id，然后用git stash apply id 命令直接恢复找回即可
 
 
 
 
 
 
-分支命令
+
+## 命令
 
 ~~~bash
 # 查看仓库分支
