@@ -76,6 +76,9 @@ git config --global user.email 497874677@qq.com
 
 git config --global user.name "quandawei"
 git config --global user.email quandawei@kanzhun.com
+
+git config --global user.name "quandawei3"
+git config --global user.email quandawei3@xiaomi.com
 ~~~
 
 查看全局配置，只是用于当前登录用户的配置，C:\Users\qdw49\.gitconfig
