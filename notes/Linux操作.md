@@ -1519,3 +1519,190 @@ lsof -i:8000
 
 展示IO开销
 
+
+
+## Maven
+
+
+
+### 跳过测试
+
+-DskipTests=true
+
+
+
+## Mysql
+
+### 连接mysql服务
+
+mysql -h192.168.5.116 -P3306 -uroot -p123456
+
+
+
+## 防火墙
+
+1. 开启防火墙
+
+------
+
+```cobol
+systemctl start firewalld.service
+```
+
+1. 开启指定端口
+
+------
+
+```cobol
+firewall-cmd --zone=public --add-port=3306/tcp --permanent
+```
+
+1. 重启防火墙
+
+------
+
+```cobol
+systemctl restart firewalld.service
+```
+
+1. 重新加载防火墙
+
+------
+
+```sql
+firewall-cmd --reload
+```
+
+
+
+1. \#查看已开启的端口
+
+   firewall-cmd *--list-ports*
+
+
+
+
+
+```bash
+#查看已开启的端口
+firewall-cmd --list-ports
+#关闭指定端口
+firewall-cmd --zone=public --remove-port=8080/tcp --permanent
+systemctl restart firewalld.service
+firewall-cmd --reload
+#查看端口被哪一个进程占用
+netstat -lnpt |grep 5672
+# centos7默认没有 netstat 命令，需要安装 net-tools 工具：
+# 安装 net-tools
+yum install -y net-tools
+# 临时关闭防火墙
+systemctl stop firewalld.service
+# 或者
+systemctl stop firewalld
+# 永久关闭防火墙（必须先临时关闭防火墙，再执行该命令，进行永久关闭）
+systemctl disable firewalld.service
+# 或者
+systemctl disable firewalld
+```
+
+
+
+## docker
+
+启动：
+systemctl start docker
+守护进程重启：
+systemctl daemon-reload
+重启docker服务：
+systemctl restart docker / service docker restart
+关闭：
+docker service docker stop / docker systemctl stop docker
+
+
+
+### 启动容器
+
+```bash
+docker run -it ubuntu /bin/bash
+```
+
+参数说明：
+
+- **-i**: 交互式操作。
+- **-t**: 终端。
+- **ubuntu**: ubuntu 镜像。
+- **/bin/bash**：放在镜像名后的是命令，这里我们希望有个交互式 Shell，因此用的是 /bin/bash。
+
+要退出终端，直接输入 **exit**:
+
+
+
+### 后台运行
+
+在大部分的场景下，我们希望 docker 的服务是在后台运行的，我们可以过 **-d** 指定容器的运行模式。
+
+```bash
+docker run -itd --name ubuntu-test ubuntu /bin/bash
+```
+
+
+
+
+
+### 进入容器
+
+在使用 **-d** 参数时，容器启动后会进入后台。此时想要进入容器，可以通过以下指令进入：
+
+- **docker attach**
+- **docker exec**：推荐大家使用 docker exec 命令，因为此命令会退出容器终端，但不会导致容器的停止。
+
+**attach 命令**
+
+下面演示了使用 docker attach 命令。
+
+```
+$ docker attach 1e560fca3906 
+```
+
+[![img](https://www.runoob.com/wp-content/uploads/2016/05/docker-attach.png)](https://www.runoob.com/wp-content/uploads/2016/05/docker-attach.png)
+
+**注意：** 如果从这个容器退出，会导致容器的停止。
+
+**exec 命令**
+
+下面演示了使用 docker exec 命令。
+
+```
+docker exec -it 243c32535da7 /bin/bash
+```
+
+[![img](https://www.runoob.com/wp-content/uploads/2016/05/docker-exec.png)](https://www.runoob.com/wp-content/uploads/2016/05/docker-exec.png)
+
+**注意：** 如果从这个容器退出，容器不会停止，这就是为什么推荐大家使用 **docker exec** 的原因。
+
+更多参数说明请使用 **docker exec --help** 命令查看。
+
+
+
+
+
+
+
+mysit启动
+
+```bash
+docker run -p 8080:8080 qdw/my-site
+```
+
+
+
+
+
+
+
+```bash
+docker run -d -p 8080:8080 qdw/my-site
+```
+
+
+
