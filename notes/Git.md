@@ -87,6 +87,13 @@ git config --global user.email quandawei3@xiaomi.com
 git config --global --list
 ~~~
 
+本地
+
+```bash
+git config --local user.name "qdw497874677"
+git config --local user.email 497874677@qq.com
+```
+
 
 
 
