@@ -24,7 +24,7 @@ PyCon2013 大会之后，许多人都意识到了容器的价值和重要性，�
 
 下图描述了 Docker Engine 的内部角色和工作流程
 
-![img](https://static001.geekbang.org/resource/image/c8/fe/c8116066bdbf295a7c9fc25b87755dfe.jpg?wh=1920x1048)
+![img](Kubernetes.assets/c8116066bdbf295a7c9fc25b87755dfe.jpg)
 
 
 
@@ -38,7 +38,7 @@ docker run hello-world
 
 它会先检查本地镜像，如果没有就从远程仓库拉取，再运行容器，最后输出运行信息：
 
-![img](https://static001.geekbang.org/resource/image/2b/06/2b1c5561438a7bdb6243dcb450e5c006.png?wh=1920x1014)
+![img](Kubernetes.assets/2b1c5561438a7bdb6243dcb450e5c006.png)
 
 
 
@@ -76,7 +76,7 @@ docker run hello-world
 
 是容器相比于虚拟机最大的优势。
 
-![img](https://static001.geekbang.org/resource/image/26/6d/26cb446ac5ec53abde2744c431200c6d.jpg?wh=1920x869)
+![img](Kubernetes.assets/26cb446ac5ec53abde2744c431200c6d.jpg)
 
 
 
@@ -116,13 +116,13 @@ Linux 操作系统内核之中，为资源隔离提供了三种技术：namespac
 
 ### 常用的镜像操作有哪些
 
-![img](https://static001.geekbang.org/resource/image/27/19/27364161a8d3c1f960a91e07b5094419.jpg?wh=1920x963)
+![img](Kubernetes.assets/27364161a8d3c1f960a91e07b5094419.jpg)
 
 docker pull 从远端仓库拉取镜像，docker images 列出当前本地已有的镜像。
 
 镜像的完整名字由两个部分组成，名字和标签，中间用 : 连接起来。有一个比较特殊的标签叫“latest”，它是默认的标签，如果只提供名字没有附带标签，那么就会使用这个默认的“latest”标签。
 
-![img](https://static001.geekbang.org/resource/image/3c/00/3c6e24139acc6d791c189879a7608c00.png?wh=1818x608)
+![img](Kubernetes.assets/3c6e24139acc6d791c189879a7608c00.png)
 
 IMAGE ID是镜像唯一的标识。
 
@@ -136,7 +136,7 @@ docker rmi ，它用来删除不再使用的镜像。
 
 ### 常用的容器操作有哪些
 
-![img](https://static001.geekbang.org/resource/image/c8/85/c8cd008e91aaff2cd91e0392b0079085.jpg?wh=1920x1747)
+![img](Kubernetes.assets/c8cd008e91aaff2cd91e0392b0079085.jpg)
 
 **docker run** 命令把这些静态的应用（镜像）运行起来，变成动态的容器了。
 
@@ -176,7 +176,7 @@ docker run 命令的时候加上一个 **--rm** 参数，这就会告诉 Docker 
 
 容器镜像内部并不是一个平坦的结构，而是由许多的镜像层组成的，每层都是只读不可修改的一组文件，相同的层可以在镜像之间共享，然后多个层像搭积木一样堆叠起来，再使用一种叫“Union FS 联合文件系统”的技术把它们合并在一起，就形成了容器最终看到的文件系统。
 
-![img](https://static001.geekbang.org/resource/image/c7/3f/c750a7795ff4787c6639dd42bf0a473f.png?wh=800x600)
+![img](Kubernetes.assets/c750a7795ff4787c6639dd42bf0a473f.png)
 
 docker inspect 来查看镜像的分层信息
 
@@ -186,7 +186,7 @@ docker inspect nginx:alpine
 
 它的分层信息在“RootFS”部分：
 
-![img](https://static001.geekbang.org/resource/image/5y/b7/5yybd821a12ec1323f6ea8bb5a5c4ab7.png?wh=1920x592)
+![img](Kubernetes.assets/5yybd821a12ec1323f6ea8bb5a5c4ab7.png)
 
 通过这张截图就可以看到，nginx:alpine 镜像里一共有 6 个 Layer。
 

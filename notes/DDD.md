@@ -98,7 +98,7 @@ DDD 重视如何应对变化，提出了所谓“柔性设计”的概念，使�
 
 对员工可以增删改查，把员工分配到部门，每个员工只属于一个部门。
 
-![img](https://static001.geekbang.org/resource/image/0d/55/0dd03878fd449eb774040bbcd6ab6e55.jpg?wh=2900x1700)
+![img](DDD.assets/0dd03878fd449eb774040bbcd6ab6e55.jpg)
 
 
 
@@ -111,7 +111,7 @@ DDD 重视如何应对变化，提出了所谓“柔性设计”的概念，使�
 3. 一个合同下可以有多个项目，系统可以对项目进行增删改查，每个项目有一个项目经理；
 4. 可以在系统中开始和结束项目，需要记录开始和结束时间等信息。项目结束以后，很多事情就不能随便做了。
 
-![img](https://static001.geekbang.org/resource/image/cf/45/cf692b1b743f8eb6838670427ayyde45.jpg?wh=2900x1874)
+![img](DDD.assets/cf692b1b743f8eb6838670427ayyde45.jpg)
 
 
 
@@ -131,7 +131,7 @@ DDD 重视如何应对变化，提出了所谓“柔性设计”的概念，使�
 
 每个员工每周都需要在系统中填报工时，登记自己哪一天在哪个项目上投入了多少时间。当然，员工可对工时进行查询和修改，还可以为每天的投入的时间填写备注。
 
-![img](https://static001.geekbang.org/resource/image/5f/14/5fc49003a2936b3b1354a1d7c2f20c14.jpg?wh=2900x1287)
+![img](DDD.assets/5fc49003a2936b3b1354a1d7c2f20c14.jpg)
 
 
 
@@ -139,7 +139,7 @@ DDD 重视如何应对变化，提出了所谓“柔性设计”的概念，使�
 
 领域驱动设计中的主要流程。
 
-![img](https://static001.geekbang.org/resource/image/3d/1e/3d591062766dede3e6039e1e0804261e.jpg?wh=2900x1314)
+![img](DDD.assets/3d591062766dede3e6039e1e0804261e.jpg)
 
 #### 模型的建立
 
@@ -182,7 +182,7 @@ DDD 重视如何应对变化，提出了所谓“柔性设计”的概念，使�
 
 事件风暴的主要过程：
 
-![img](https://static001.geekbang.org/resource/image/ea/1b/ea006b757ab0b2aeff0d888128f9d31b.jpg?wh=3101x1393)
+![img](DDD.assets/ea006b757ab0b2aeff0d888128f9d31b.jpg)
 
 
 
@@ -218,7 +218,7 @@ DDD 重视如何应对变化，提出了所谓“柔性设计”的概念，使�
 
 比如合同已签订这个事件，命令或者是操作就是签订合同，执行者是销售人员，要查询的数据是客户信息。
 
-![img](https://static001.geekbang.org/resource/image/4d/fd/4dd991bc3c78fa14b13372eebb6da4fd.jpg?wh=3733x1841)
+![img](DDD.assets/4dd991bc3c78fa14b13372eebb6da4fd.jpg)
 
 
 
@@ -288,7 +288,7 @@ DDD 重视如何应对变化，提出了所谓“柔性设计”的概念，使�
 
 电子图，表格，例如
 
-![img](https://static001.geekbang.org/resource/image/8b/83/8bc08717ff0e4cdbaef300a0169a8983.jpg?wh=5343x2545)
+![img](DDD.assets/8bc08717ff0e4cdbaef300a0169a8983.jpg)
 
 通常，如果事件风暴的内容最终会反映到用户故事、用例、功能列表等产出物中，而这些产出物会进行维护，那我们就不必专门更新事件风暴的产出物了，只在需要的时候作为一种沟通工具，将电子化的结果作为一种中间产物保存就可以了。但是，如果你的团队并没有用户故事和用例等保存行为需求的方式，那么我建议你对事件风暴进行维护和更新。
 
@@ -300,7 +300,7 @@ DDD 重视如何应对变化，提出了所谓“柔性设计”的概念，使�
 
 所以，我们要编一个领域规则表，把所有的领域规则都汇总在里面，然后再把领域规则表和领域模型放在一起，作为领域知识的重要组成部分，后面就是一个例子。
 
-![img](https://static001.geekbang.org/resource/image/c9/bc/c907a49f0bfc5f25d8f4207655eea9bc.jpg?wh=6535x3373)
+![img](DDD.assets/c907a49f0bfc5f25d8f4207655eea9bc.jpg)
 
 
 
@@ -337,7 +337,7 @@ DDD 中将领域对象又分成实体（entity）和值对象（value object）�
 
 识别实体时，可以假设所有的领域名词都是实体，把他们用类的符号画出来，如果实体的名字已经能清晰说明实体的含义，那我们就不需要加属性了。如果名字还不足以充分表达含义，我们可以写几个关键属性，来辅助说明。
 
-![img](https://static001.geekbang.org/resource/image/44/ed/44f07dee31058e65751607990620e9ed.jpg?wh=1990x893)
+![img](DDD.assets/44f07dee31058e65751607990620e9ed.jpg)
 
 
 
@@ -351,11 +351,11 @@ DDD 中将领域对象又分成实体（entity）和值对象（value object）�
 
 企业与开发中心。一个开发中心只能属于一个企业，一个企业可以有多个开发中心。他们具有一对多关联。
 
-![img](https://static001.geekbang.org/resource/image/d7/64/d74786c37b28f3151a06457ec6d0ba64.jpg?wh=2900x1665)
+![img](DDD.assets/d74786c37b28f3151a06457ec6d0ba64.jpg)
 
 当开发中心和开发组之间增加一层开发团队，模型需要修改，也就是说这个**模型不容易适应组织层级的变化**。或者一个员工不属于开发组而只属于开发中心，比如开发中心的主管。同理，企业总经理也只属于企业本身而不属于任何下属部门。那么为了表达这种关系，我们就要再增加两条表示关联的线。
 
-![img](https://static001.geekbang.org/resource/image/7f/5c/7f8ebfb9ec0389e86162c15e3c109d5c.jpg?wh=2900x2181)
+![img](DDD.assets/7f8ebfb9ec0389e86162c15e3c109d5c.jpg)
 
 线越多，图就越杂乱。也就是说，这个**模型不够简洁**。怎么解决？
 
@@ -363,7 +363,7 @@ DDD 中将领域对象又分成实体（entity）和值对象（value object）�
 
 企业、开发中心、开发组、直属部门，其实都是组织结构中的节点而已，从这一点来说，他们是有共性的。将他们抽象成**组织**。组织有不同的组织类别。一个组织类别下可以有多个组织，而一个组织只能属于一个组织类别。
 
-![img](https://static001.geekbang.org/resource/image/82/01/825c9dd6a61eda8aac97dec2647e9401.jpg?wh=1990x1802)
+![img](DDD.assets/825c9dd6a61eda8aac97dec2647e9401.jpg)
 
 
 
@@ -373,7 +373,7 @@ DDD 中将领域对象又分成实体（entity）和值对象（value object）�
 
 在这个自关联的两端，有上级和下级两个词。它们在 UML 里称为“角色”（role）。
 
-![img](https://static001.geekbang.org/resource/image/ec/ac/ecb8c0aa73f3e241a98d1878fef5yyac.jpg?wh=1990x1736)
+![img](DDD.assets/ecb8c0aa73f3e241a98d1878fef5yyac.jpg)
 
 ### 增加“约束”
 
@@ -387,7 +387,7 @@ DDD 中将领域对象又分成实体（entity）和值对象（value object）�
 
 如果都用线关联起来会非常复杂，可以添加一个注释和一个约束来说明上面两个问题。
 
-![img](https://static001.geekbang.org/resource/image/54/8b/547ecc1f79f1020a285e9c6aced41f8b.jpg?wh=2900x2103)
+![img](DDD.assets/547ecc1f79f1020a285e9c6aced41f8b.jpg)
 
 
 
@@ -395,7 +395,7 @@ DDD 中将领域对象又分成实体（entity）和值对象（value object）�
 
 管理员和人事人员怎么加入呢，其实他们都是员工担任的岗位。一个员工可以担任多个岗位，而一个岗位也可以有多个员工担任。员工和岗位之间是“多对多”关联。
 
-![img](https://static001.geekbang.org/resource/image/7d/3b/7d95a011d79d57f38923ae5c147cd23b.jpg?wh=2900x1961)
+![img](DDD.assets/7d95a011d79d57f38923ae5c147cd23b.jpg)
 
 
 
@@ -403,17 +403,17 @@ DDD 中将领域对象又分成实体（entity）和值对象（value object）�
 
 多重性可以在细化。一个组织最少有 0 个员工，最多可以有很多员工。
 
-![img](https://static001.geekbang.org/resource/image/d3/f9/d37b90338db023b93374b6ae2d65f7f9.jpg?wh=1990x1002)
+![img](DDD.assets/d37b90338db023b93374b6ae2d65f7f9.jpg)
 
 一个员工必须属于一个组织。
 
-![img](https://static001.geekbang.org/resource/image/b0/4d/b0a00d1dffbcd3d7ca7177530222144d.jpg?wh=1990x1002)
+![img](DDD.assets/b0a00d1dffbcd3d7ca7177530222144d.jpg)
 
 在实际项目中，团队可以自行决定，把多重性识别得粗一点，只写 “1”和 “*” ；还是细一点，识别出 “1..1” “0..*” 等等。
 
 丰富了多重性以后，整个模型成为了下面的样子：
 
-![img](https://static001.geekbang.org/resource/image/df/87/df6a6dbb07c24ea19b5a6219f5fe7a87.jpg?wh=2900x1796)
+![img](DDD.assets/df6a6dbb07c24ea19b5a6219f5fe7a87.jpg)
 
 
 
