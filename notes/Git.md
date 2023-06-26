@@ -613,7 +613,7 @@ git config --local user.name "qdw497874677"
 git config --local user.email "497874677@qq.com"
 ~~~
 
-2. 生成ssh 秘钥
+2. 生成ssh 秘钥，并改名比如id_rsa_qdw497874677_github
 
 ```bash
 ssh-keygen -t rsa -C "497874677@qq.com"
