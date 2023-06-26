@@ -319,7 +319,7 @@ docker build 通过-t 参数指定生成镜像的名称。名字应该符合规�
 
 ### 什么是镜像仓库
 
-![img](https://static001.geekbang.org/resource/image/c8/fe/c8116066bdbf295a7c9fc25b87755dfe.jpg?wh=1920x1048)
+![img](Kubernetes.assets/c8116066bdbf295a7c9fc25b87755dfe-7238070.jpg)
 
 右边的区域就是镜像仓库，术语叫 Registry。就像是手机应用商店。
 
@@ -429,7 +429,7 @@ docker run -d --rm --net=host nginx:alpine
 
 可以用 --net=bridge 来启用桥接模式，但是默认网络模式就是bridge。
 
-![img](https://static001.geekbang.org/resource/image/6e/60/6e0d05cf19720f44ca68f88238627460.jpg?wh=1920x1407)
+![img](Kubernetes.assets/6e0d05cf19720f44ca68f88238627460.jpg)
 
 可以用 docker inspect 直接查看容器的 ip 地址
 
@@ -472,7 +472,7 @@ docker run -d -p 8080:80 --rm nginx:alpine
 
 简单的网络架构图
 
-![img](https://static001.geekbang.org/resource/image/59/ca/59dfbe961bcd233b83e1c1ec064e2eca.png?wh=1920x643)
+![img](Kubernetes.assets/59dfbe961bcd233b83e1c1ec064e2eca.png)
 
 
 
@@ -495,27 +495,86 @@ docker pull nginx:alpine
 ```bash
 docker run -d --rm \
     --env MARIADB_DATABASE=db \
-    --env MARIADB_USER=wp \
-    --env MARIADB_PASSWORD=123 \
-    --env MARIADB_ROOT_PASSWORD=123 \
+    --env MARIADB_USER=qdw \
+    --env MARIADB_PASSWORD=123321 \
+    --env MARIADB_ROOT_PASSWORD=123321 \
     mariadb:10
 ```
 
-![image-20230616133026836](/Users/quandawei/Library/Application Support/typora-user-images/image-20230616133026836.png)
+![image-20230616133026836](Kubernetes.assets/image-20230616133026836.png)
 
 进入容器验证下数据库
 
 ```bash
-docker exec -it 784 mysql -u wp -p
+docker exec -it 68b mysql -u qdw -p
+```
+
+![image-20230620131130208](Kubernetes.assets/image-20230620131130208.png)
+
+查看容器的ip地址：
+
+```bash
+docker inspect 68b |grep IPAddress
+```
+
+![image-20230620131734745](Kubernetes.assets/image-20230620131734745-7238259-7238262.png)
+
+"IPAddress": "172.17.0.3"
+
+#### 运行WordPress
+
+```bash
+docker run -d --rm \
+    --env WORDPRESS_DB_HOST=172.17.0.3 \
+    --env WORDPRESS_DB_USER=qdw \
+    --env WORDPRESS_DB_PASSWORD=123321 \
+    --env WORDPRESS_DB_NAME=db \
+    wordpress:5
+```
+
+查看容器的ip地址：
+
+```bash
+docker inspect 539 |grep IPAddress
+```
+
+![image-20230620132216903](Kubernetes.assets/image-20230620132216903.png)
+
+"IPAddress": "172.17.0.4"
+
+#### 运行Nginx
+
+没有为WP配置映射端口号，我们用Nginx配置反向代理，把请求转发给WP的80端口。这里需要WP的IP地址。
+
+写出配置文件如下：
+
+```bash
+server {
+  listen 80;
+  default_type text/html;
+
+  location / {
+      proxy_http_version 1.1;
+      proxy_set_header Host $host;
+      proxy_pass http://172.17.0.4;
+  }
+}
+```
+
+启动Nginx，用-p把本机的端口映射到Nginx容器的80端口，然后用-v把配置文件挂在到Nginx的conf.d目录下。
+
+```bash
+docker run -d --rm \
+    -p 8080:80 \
+    -v ./wp-nginx.conf:/etc/nginx/conf.d/default.conf \
+    nginx:alpine
 ```
 
 
 
+登录成功
 
-
-
-
-
+![image-20230620135804667](Kubernetes.assets/image-20230620135804667-7240687.png)
 
 # 初级篇
 

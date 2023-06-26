@@ -602,7 +602,40 @@ $ ssh-keygen -t rsa -C "497874677@qq.com"
 
 ![image-20200521143603204](Git.assets/image-20200521143603204.png)
 
-## 
+
+
+## 一台电脑设置多个ssh公钥
+
+1. 在每个项目下设置好用户名邮箱
+
+~~~bash
+git config --local user.name "qdw497874677"
+git config --local user.email "497874677@qq.com"
+~~~
+
+2. 生成ssh 秘钥
+
+```bash
+ssh-keygen -t rsa -C "497874677@qq.com"
+# ssh-keygen -t rsa -C "quandawei3@xiaomi.com"
+```
+
+把公钥放到账号上
+
+3. 设置config文件
+
+.ssh文件夹下，如果没有就创建一个
+
+```bash
+#github.com账号的
+Host github.com
+HostName github.com
+IdentityFile ~/.ssh/id_rsa_qdw497874677_github
+#工作账号
+Host git.n.xiaomi.com
+HostName git.n.xiaomi.com
+IdentityFile ~/.ssh/id_rsa_gitee_quandawei3_xiaomi
+```
 
 
 
