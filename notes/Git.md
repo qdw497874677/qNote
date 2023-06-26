@@ -639,6 +639,14 @@ IdentityFile ~/.ssh/id_rsa_gitee_quandawei3_xiaomi
 
 
 
+如果mac遇到.DS_Store冲突
+
+```bash
+find . -name '*.DS_Store' -type f -delete
+```
+
+
+
 # 分支命令
 
 master：主分支，永远是可用的、稳定的、可直接发布的版本，不能直接在该分支上开发
