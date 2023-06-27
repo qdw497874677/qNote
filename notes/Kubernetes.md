@@ -730,3 +730,16 @@ kubectl run ngx --image=nginx:alpine
 ```
 
 ![image-20230627134813620](Kubernetes.assets/image-20230627134813620.png)
+
+![img](Kubernetes.assets/90a478eeb6ae8a6ccd988fedc3ab4096.jpg)
+
+
+
+## Kubernetes工作机制
+
+
+
+### 云计算时代的操作系统
+
+Kubernetes 是一个生产级别的容器编排平台和集群管理系统，能够创建、调度容器，监控、管理服务器。
+
