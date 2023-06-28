@@ -582,6 +582,8 @@ docker run -d --rm \
 
 ## 走进云原生：搭建Kubernetes环境
 
+这里环境搭载我的本地mac上
+
 ### 什么是容器编排
 
 容器技术开启了云原生时代，但它也只走出了一小步，还要面临容器之间相互协作的问题。
@@ -627,18 +629,24 @@ minikube 支持 Mac、Windows、Linux 这三种主流平台。
 curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
 
 # Apple arm64
-curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-arm64
+curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-darwin-arm64
 
 sudo install minikube /usr/local/bin/
 ```
 
+![image-20230627132803591](Kubernetes.assets/image-20230627132803591.png)
+
+![image-20230627132858704](Kubernetes.assets/image-20230627132858704.png)
+
 安装完成之后，你可以执行命令 minikube version，看看它的版本号。
+
+![image-20230627132917147](Kubernetes.assets/image-20230627132917147.png)
 
 不过 minikube 只能够搭建 Kubernetes 环境，要操作 Kubernetes，还需要另一个专门的客户端工具“kubectl”。
 
 kubectl 的作用有点类似之前我们学习容器技术时候的工具“docker”，它也是一个命令行工具，作用也比较类似，同样是与 Kubernetes 后台服务通信，把我们的命令转发给 Kubernetes，实现容器和集群的管理功能。
 
-kubectl 是一个与 Kubernetes、minikube 彼此独立的项目，所以不包含在 minikube 里，但 minikube 提供了安装它的简化方式，你只需执行下面的这条命令：
+kubectl 是一个与 Kubernetes、minikube 彼此独立的项目，所以不包含在 minikube 里，但 minikube 提供了安装它的简化方式，用minikube执行命令：
 
 ```bash
 minikube kubectl
@@ -652,7 +660,86 @@ minikube kubectl
 
 ### 验证minikube环境
 
+运行minikube，创建Kubernetes实验环境
+
+使用命令 minikube start 会从 Docker Hub 上拉取镜像，以当前最新版本的 Kubernetes 启动集群。
+
+可以在后面再加上一个参数 --kubernetes-version，明确指定要使用 Kubernetes 版本。
+
+这里用1.23.3
+
+```bash
+minikube start --kubernetes-version=v1.23.3
+```
+
+![image-20230627130845927](Kubernetes.assets/image-20230627130845927.png)
+
+查看集群的状态：
+
+```bash
+minikube status
+minikube node list
+```
+
+![image-20230627134120741](Kubernetes.assets/image-20230627134120741.png)
+
+从上图能看到，集群中只有一个节点，minikube，型是“Control Plane”，里面有 host、kubelet、apiserver 三个服务，ip地址是192.168.49.2。
+
+可以通过登录到这个节点上：
+
+```bash
+minikube ssh
+```
+
+![image-20230627134201827](Kubernetes.assets/image-20230627134201827.png)
+
+exit登出
+
+使用 kubectl 来操作一下，查看版本
+
+```bash
+kubectl version
+```
+
+> 我的可以直接用
+
+不过这条命令还不能直接用，因为使用 minikube 自带的 kubectl 有一点形式上的限制，要在前面加上 minikube 的前缀，后面再有个 --，像这样：
+
+minikube kubectl -- version 
+
+为了避免这个不大不小的麻烦，我建议你使用 Linux 的“alias”功能，为它创建一个别名，写到当前用户目录下的 .bashrc 里，也就是这样：
+
+alias kubectl="minikube kubectl --"
+
+另外，kubectl 还提供了命令自动补全的功能，你还应该再加上“kubectl completion”：
+
+source <(kubectl completion bash)
 
 
 
+**在 Kubernetes 里运行一个 Nginx 应用**，命令与 Docker 一样，也是 run，不过形式上有点区别，需要用 --image 指定镜像，然后 Kubernetes 会自动拉取并运行：
+
+```bash
+kubectl run ngx --image=nginx:alpine
+```
+
+这里涉及 Kubernetes 里的一个非常重要的概念：**Pod**，可以暂时理解成容器，查看 Pod 列表需要使用命令 kubectl get pod，它的效果类似 docker ps：
+
+```bash
+kubectl run ngx --image=nginx:alpine
+```
+
+![image-20230627134813620](Kubernetes.assets/image-20230627134813620.png)
+
+![img](Kubernetes.assets/90a478eeb6ae8a6ccd988fedc3ab4096.jpg)
+
+
+
+## Kubernetes工作机制
+
+
+
+### 云计算时代的操作系统
+
+Kubernetes 是一个生产级别的容器编排平台和集群管理系统，能够创建、调度容器，监控、管理服务器。
 
