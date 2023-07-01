@@ -726,7 +726,7 @@ kubectl run ngx --image=nginx:alpine
 这里涉及 Kubernetes 里的一个非常重要的概念：**Pod**，可以暂时理解成容器，查看 Pod 列表需要使用命令 kubectl get pod，它的效果类似 docker ps：
 
 ```bash
-kubectl run ngx --image=nginx:alpine
+kubectl get pod
 ```
 
 ![image-20230627134813620](Kubernetes.assets/image-20230627134813620.png)
@@ -741,5 +741,327 @@ kubectl run ngx --image=nginx:alpine
 
 ### 云计算时代的操作系统
 
-Kubernetes 是一个生产级别的容器编排平台和集群管理系统，能够创建、调度容器，监控、管理服务器。
+Kubernetes可以说是一个集群级别的操作系统，主要功能就是资源管理和作业调度。
+
+相比于单机上的操作系统，他管理的是多台服务器上的计算资源，而不只是单台机器的计算资源和进程。
+
+应用实施流程也发生了变化。在k8s这里，开发和运维的界线不那么清晰了，组合成DevOps。
+
+### Kubernetes 的基本架构
+
+操作系统的一个重要功能就是抽象，从繁琐的底层事务中抽象出一些简洁的概念，然后基于这些概念去管理系统资源。
+
+k8s结构图
+
+![img](Kubernetes.assets/344e0c6dc2141b12f99e61252110f6b7.png)
+
+Kubernetes 采用了现今流行的**“控制面 / 数据面”（Control Plane / Data Plane）**架构。
+
+集群里的计算机被称为**“节点”（Node）**，可以是实机也可以是虚机。少量的节点用作控制面来执行集群的管理维护工作，其他的大部分节点都被划归数据面，用来跑业务应用。
+
+控制面的节点在 Kubernetes 里叫做 **Master Node**，一般简称为 **Master**，它是整个集群里最重要的部分，可以说是 Kubernetes 的大脑和心脏。
+
+数据面的节点叫做 **Worker Node**，一般就简称为 **Worker** 或者 **Node**，相当于 Kubernetes 的手和脚，在 Master 的指挥下干活。
+
+**kubectl**，它就是 Kubernetes 的客户端工具，用来操作 Kubernetes，但它位于集群之外，理论上不属于集群。
+
+Master 和 Node 的划分不是绝对的。当集群的规模较小，工作负载较少的时候，**Master 也可以承担 Node 的工作**。
+
+我们搭建的 minikube 环境，它就只有一个节点，这个节点既是 Master 又是 Node。
+
+查看 Kubernetes 的节点状态：
+
+```bash
+kubectl get node
+```
+
+![image-20230628131824777](Kubernetes.assets/image-20230628131824777.png)
+
+
+
+### 节点内部的结构
+
+节点内部由很多的模块组成，主要分为两类
+
+- **组件（Component）**：实现了 Kubernetes 的核心功能特性，没有这些组件 Kubernetes 就无法启动。
+- **插件（Addon）**：是 Kubernetes 的一些附加功能，属于“锦上添花”，不安装也不会影响 Kubernetes 的正常运行。
+
+
+
+### Master里的组件有哪些
+
+Master 里有 4 个组件，分别是 **apiserver、etcd、scheduler、controller-manager**。
+
+![img](Kubernetes.assets/330e03a66f636657c0d8695397c508c6.jpg)
+
+- apiserver：是 Master 节点——同时也是整个 **Kubernetes 系统的唯一入口**，它对外公开了一系列的 RESTful API，并且加上了验证、授权等功能，**所有其他组件都只能和它直接通信**，可以说是 Kubernetes 里的联络员。
+- etcd：是一个高可用的分布式 Key-Value 数据库，用来**持久化存储系统里的各种资源对象和状态**，相当于 Kubernetes 里的配置管理员。**它只与 apiserver 有直接联系**，也就是说任何其他组件想要读写 etcd 里的数据都必须经过 apiserver。
+- scheduler：**负责容器的编排工作**，检查节点的资源状态，把 Pod 调度到最适合的节点上运行，相当于部署人员。因为节点状态和 Pod 信息都存储在 etcd 里，所以 scheduler 必须通过 apiserver 才能获得。
+- controller-manager：**负责维护容器和节点等资源的状态，实现故障检测、服务迁移、应用伸缩等功能**，相当于监控运维人员。同样地，它也必须通过 apiserver 获得存储在 etcd 里的信息，才能够实现对资源的各种操作。
+
+这 4 个组件也都被容器化了，运行在集群的 Pod 里，我们可以用 kubectl 来查看它们的状态，使用命令：
+
+```bash
+kubectl get pod -n kube-system
+```
+
+注意命令行里要用 -n kube-system 参数，表示检查“kube-system”名字空间里的 Pod，至于名字空间是什么，我们后面会讲到。
+
+![image-20230628132933374](Kubernetes.assets/image-20230628132933374.png)
+
+
+
+### Node里的组件有哪些
+
+Master 里的 apiserver、scheduler 等组件需要获取节点的各种信息才能够作出管理决策，那这些信息该怎么来呢？
+
+需要 Node 里的 3 个组件：**kubelet、kube-proxy、container-runtime**。
+
+- kubelet：Node 的代理，负责管理 Node 相关的绝大部分操作，**Node 上只有它能够与 apiserver 通信**，实现状态报告、命令下发、启停容器等功能，相当于是 Node 上的一个“小管家”。
+- kube-proxy：Node 的网络代理，**只负责管理容器的网络通信**，简单来说就是为 Pod 转发 TCP/UDP 数据包，相当于是专职的“小邮差”。
+- container-runtime：是容器和镜像的实际使用者，**在 kubelet 的指挥下创建容器，管理 Pod 的生命周期**，是真正干活的“苦力”。
+
+![img](Kubernetes.assets/87bab507ce8381325e85570f3bc1d935.jpg)
+
+**Kubernetes 的定位是容器编排平台**，所以它没有限定 container-runtime 必须是 Docker，完全可以替换成任何符合标准的其他容器运行时，例如 containerd、CRI-O 等等，只不过在这里我们使用的是 Docker。
+
+使用 minikube ssh 命令登录到节点后，可以用 docker ps 看到 kube-proxy：
+
+```bash
+minikube ssh
+docker ps |grep kube-proxy
+```
+
+![image-20230628133701890](Kubernetes.assets/image-20230628133701890.png)
+
+而 kubelet 用 docker ps 是找不到的，需要用操作系统的 ps 命令：
+
+```bash
+ps -ef|grep kubelet
+```
+
+![image-20230628133839710](Kubernetes.assets/image-20230628133839710.png)
+
+再把 Node 里的组件和 Master 里的组件放在一起来看，能看出来 Kubernetes 的大致工作流程：
+
+- 每个 Node 上的 kubelet 会定期向 apiserver 上报节点状态，apiserver 再存到 etcd 里。
+- 每个 Node 上的 kube-proxy 实现了 TCP/UDP 反向代理，让容器对外提供稳定的服务。
+- scheduler 通过 apiserver 得到当前的节点状态，调度 Pod，然后 apiserver 下发命令给某个 Node 的 kubelet，kubelet 调用 container-runtime 启动容器。
+- controller-manager 也通过 apiserver 得到实时的节点状态，监控可能的异常情况，再使用相应的手段去调节恢复。
+
+![img](Kubernetes.assets/344e0c6dc2141b12f99e61252110f6b7-20230630130612092.png)
+
+这些流程再k8s出现前也存在，k8s把这些流程和操作都抽象化和规范化了。
+
+### 插件（Addons）有哪些
+
+只要服务器节点上运行了 apiserver、scheduler、kubelet、kube-proxy、container-runtime 等组件，就可以说是一个功能齐全的 Kubernetes 集群了。
+
+Kubernetes 本身的设计非常灵活，所以就有大量的插件用来扩展、增强它对应用和集群的管理能力。
+
+minikube 也支持很多的插件，使用命令 minikube addons list 就可以查看插件列表：
+
+```bash
+minikube addons list
+```
+
+![image-20230630131317337](Kubernetes.assets/image-20230630131317337.png)
+
+比较重要的有两个：DNS 和 Dashboard。
+
+- DNS ，它在 Kubernetes 集群里实现了域名解析服务，能够让我们以域名而不是 IP 地址的方式来互相通信，是服务发现和负载均衡的基础。由于它对微服务、服务网格等架构至关重要，所以基本上是 Kubernetes 的必备插件。
+
+- Dashboard 就是仪表盘，为 Kubernetes 提供了一个图形化的操作界面，非常直观友好，虽然大多数 Kubernetes 工作都是使用命令行 kubectl，但有的时候在 Dashboard 上查看信息也是挺方便的。
+
+  - 你只要在 minikube 环境里执行一条简单的命令，就可以自动用浏览器打开 Dashboard 页面，而且还支持中文：
+
+  - ```bash
+    minikube dashboard
+    ```
+
+![image-20230630132119543](Kubernetes.assets/image-20230630132119543.png)
+
+
+
+## YAML
+
+### 声明式和命令式
+
+- “声明式”（Declarative）：特点是交互性强，注重顺序和过程，告诉计算机每步应该做什么，所有步骤都列清楚。
+- “命令式”（Imperative）：特点是不关心具体的过程，更注重结果。只需要告诉计算机一个目标状态，他就会自己想办法去完成任务。
+
+>  两者不是绝对对立关系，可能相互包含。
+
+Docker中的Dockerfile属于命令式，大多数编程语言属于命令式。
+
+对于使用者更少的关心细节，很多事在系统中已经定义好了如何去做。
+
+容器技术里的 Shell 脚本和 Dockerfile 可以很好地描述“命令式”，但对于“声明式”就不太合适了，这个时候，我们需要使用专门的 YAML 语言。
+
+### 什么是YAML
+
+YAML 语言创建于 2001 年，比 XML 晚了三年。XML 是一种类似 HTML 的标签式语言，有很多繁文缛节。YAML更适合人类阅读，计算机解析起来也很容易。
+
+**YAML是JSON的超集。**但和 JSON 比起来，YAML 的语法更简单，形式也更清晰紧凑，比如：
+
+- 使用空白与缩进表示层次（**有点类似 Python**），可以不使用花括号和方括号。
+- 可以使用 # 书写注释，比起 JSON 是很大的改进。
+- 对象（字典）的格式与 JSON 基本相同，但 Key 不需要使用双引号。
+- 数组（列表）是使用 - 开头的清单形式（有点类似 MarkDown）。
+- 表示对象的 : 和表示数组的 - 后面都必须要有空格。
+- 可以使用 --- 在一个文件里分隔多个 YAML 对象。
+
+![img](Kubernetes.assets/d4f3d4cc27a8a4a70d4898b41efebf04.jpg)
+
+
+
+### 什么是API对象
+
+YAML 语言只相当于“语法”，要与 Kubernetes 对话，我们还必须有足够的“词汇”来表示“语义”。
+
+作为一个集群操作系统，Kubernetes 归纳总结了 Google 多年的经验，在理论层面抽象出了很多个概念，用来描述系统的管理运维工作，这些概念就叫做“**API 对象**”。
+
+查看当前 Kubernetes 版本支持的所有对象：
+
+```bash
+kubectl api-resources
+```
+
+![image-20230701113422277](Kubernetes.assets/image-20230701113422277.png)
+
+在输出的“NAME”一栏，就是对象的名字，第二栏是这种资源的简写。
+
+在使用 kubectl 命令的时候，你还可以加上一个参数 --v=9，它会显示出详细的命令执行过程，清楚地看到发出的 HTTP 请求，比如：
+
+```bash
+kubectl get pod --v=9
+```
+
+![image-20230701113640280](Kubernetes.assets/image-20230701113640280.png)
+
+kubectl 客户端等价于调用了 curl，向 8443 端口发送了 HTTP GET 请求，URL 是 /api/v1/namespaces/default/pods。
+
+
+
+### 如何描述API对象
+
+之前**运行nginx**是这样的kubectl run ngx --image=nginx:alpine，kubectl run是命令式的，如果**改写成声明式的YAML**，就需要描述应用是什么样子，让k8s去拉取。
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ngx-pod
+  labels:
+    env: demo
+    owner: chrono
+
+spec:
+  containers:
+  - image: nginx:alpine
+    name: ngx
+    ports:
+    - containerPort: 80
+```
+
+它是一个 Pod，要使用 nginx:alpine 镜像创建一个容器，开放端口 80，而其他的部分，就是 Kubernetes 对 API 对象强制的格式要求了。
+
+一个API对象大概分为两部分：
+
+第一部分是API对象的基本信息，包含三个字段apiVersion、kind、metadata。
+
+- apiVersion 表示操作这种资源的 API 版本号，由于 Kubernetes 的迭代速度很快，不同的版本创建的对象会有差异，为了区分这些版本就需要使用 apiVersion 这个字段，比如 v1、v1alpha1、v1beta1 等等。
+- kind 表示资源对象的类型，这个应该很好理解，比如 Pod、Node、Job、Service 等等。
+- metadata 这个字段顾名思义，表示的是资源的一些“元信息”，也就是用来标记对象，方便 Kubernetes 管理的一些信息。
+
+第二部分对于不同的对象有不同的规格定义，表现为spec字段
+
+上面例子中有个containers数组，里面元素又是一个对象，指定了名字、镜像、端口等信息。
+
+**通过这个yam文件，创建或者删除对象**：
+
+```bash
+kubectl apply -f ngx-pod.yml
+kubectl delete -f ngx-pod.yml
+```
+
+
+
+### 如何编写YAML
+
+官方文档：https://kubernetes.io/docs/reference/kubernetes-api/
+
+两个技巧：
+
+1. 显示出资源对象相应的 API 版本和类型。
+
+```bash
+bashkubectl api-resources
+```
+
+
+
+1. Kubernetes 自带的 API 文档。
+
+```bash
+kubectl explain
+```
+
+
+
+比如想要看 Pod 里的字段该怎么写，就可以这样：
+
+```bash
+kubectl explain pod
+kubectl explain pod.metadata
+kubectl explain pod.spec
+kubectl explain pod.spec.containers
+```
+
+![image-20230701115018514](Kubernetes.assets/image-20230701115018514.png)
+
+3. 生成模板
+
+```bash
+kubectl run ngx --image=nginx:alpine --dry-run=client -o yaml
+```
+
+两个特殊参数 **--dry-run=client 和 -o yaml**，前者是空运行，后者是生成 YAML 格式，结合起来使用就会让 kubectl 不会有实际的创建动作，而只生成 YAML 文件。
+
+然后来定制这个YAML
+
+![image-20230701115317658](Kubernetes.assets/image-20230701115317658.png)
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: ngx
+  name: ngx
+spec:
+  containers:
+  - image: nginx:alpine
+    name: ngx
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+```
+
+
+
+再进化一下，把这段参数定义成 **Shell 变量**（名字任意，比如$do/$go，这里用的是$out），用起来会更省事，比如：
+
+```bash
+export out="--dry-run=client -o yaml"
+kubectl run ngx --image=nginx:alpine $out
+```
+
+![img](Kubernetes.assets/13dc437dda840dda4850fb72237b8e36.jpg)
+
+
+
+## Pod
 
