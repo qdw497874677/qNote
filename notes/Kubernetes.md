@@ -1065,3 +1065,489 @@ kubectl run ngx --image=nginx:alpine $out
 
 ## Pod
 
+那么为什么 Kubernetes 不直接使用已经非常成熟稳定的容器？为什么要再单独抽象出一个 Pod 对象？为什么几乎所有人都说 Pod 是 Kubernetes 里最核心最基本的概念呢？
+
+### 为什么要有Pod
+
+有些应用容器联系紧密，要求一组容器在一次才能完成一件事。
+
+为了**解决这样多应用联合运行的问题**，同时还要不破坏容器的隔离，就需要在容器外面再建立一个“收纳舱”，让多个容器既保持相对独立，又能够小范围共享网络、存储等资源，而且永远是“绑在一起”的状态。
+
+- **容器：单个应用的封装** 
+- **pod：一组协同/依赖的多个应用的封装**
+
+可以在 Pod 的 YAML 里看到，“spec.containers”字段其实是一个数组，里面允许定义多个容器。
+
+### 为什么Pod是Kubernetes的核心对象
+
+因为 Pod 是对容器的“打包”，里面的容器是一个整体，总是能够一起调度、一起运行，绝不会出现分离的情况，而且 Pod 属于 Kubernetes，可以在不触碰下层容器的情况下任意定制修改。所以有了 Pod 这个抽象概念，Kubernetes 在集群级别上管理应用就会“得心应手”了。
+
+**Kubernetes 让 Pod 去编排处理容器，然后把 Pod 作为应用调度部署的最小单位**，Pod 也因此成为了 Kubernetes 世界里的“原子”（当然这个“原子”内部是有结构的，不是铁板一块），基于 Pod 就可以构建出更多更复杂的业务形态了。
+
+![img](Kubernetes.assets/9ebab7d513a211a926dd69f7535ac175.png)
+
+随着 Kubernetes 的发展，这张图已经不能够全面地描述 Kubernetes 的资源对象了。
+
+重新画了一份以 Pod 为中心的 Kubernetes 资源对象关系图，添加了一些新增的 Kubernetes 概念
+
+![img](Kubernetes.assets/b5a7003788cb6f2b1c5c4f6873a8b5cf.jpg)
+
+从这两张图中你也应该能够看出来，所有的 Kubernetes 资源都直接或者间接地依附在 Pod 之上，**所有的 Kubernetes 功能都必须通过 Pod 来实现**，所以 Pod 理所当然地成为了 Kubernetes 的核心对象。
+
+
+
+### 如何使用YAML描述Pod
+
+Pod 也是 API 对象，所以它也必然具有 apiVersion、kind、metadata、spec 这四个基本组成部分。
+
+- apiVersion：对于Pod一般是固定值v1
+- kind：对于Pod一般是固定值Pod
+- metadata：一般有两个字段：name和labels
+  - name：Pod 必须要有一个名字，这也是 Kubernetes 里所有资源对象的一个约定。通常给Pod名字后面加上pod后缀。name 只是一个基本的标识，信息有限。
+  - labels：可以添加任意数量的 Key-Value，给 Pod“贴”上归类的标签，结合 name 就更方便识别和管理了。
+    - 比如可以通过标签区分环境：env=dev/test/prod；区分使用的数据中心：region: north/south等等。
+
+下面是一个简单的Pod
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busy-pod
+  labels:
+    owner: chrono
+    env: demo
+    region: north
+    tier: back
+```
+
+“spec”字段由于需要管理、维护 Pod 这个 Kubernetes 的基本调度单元，里面有非常多的关键信息，今天我介绍最重要的“containers”
+
+- **spec**
+  - **container**：必须有一个name，其他字段和Docker中的类似
+    - **name**
+    - **ports**：列出容器对外暴露的端口
+    - **imagePullPolicy**：指定镜像的拉取策略，可以是 Always/Never/IfNotPresent，一般默认是 IfNotPresent，也就是说只有本地不存在才会远程拉取镜像
+    - **env**：定义Pod的环境变量。和 Dockerfile 里的 ENV 指令有点类似，但它是运行时指定的，更加灵活可配置。
+    - **command**：定义容器启动时要执行的命令，相当于 Dockerfile 里的 ENTRYPOINT 指令。
+    - **args**：command 运行时的参数，相当于 Dockerfile 里的 CMD 指令，这两个命令和 Docker 的含义不同，要特别注意。
+
+```yaml
+spec:
+  containers:
+  - image: busybox:latest
+    name: busy
+    imagePullPolicy: IfNotPresent
+    env:
+      - name: os
+        value: "ubuntu"
+      - name: debug
+        value: "on"
+    command:
+      - /bin/echo
+    args:
+      - "$(os), $(debug)"
+```
+
+为 Pod 指定使用镜像 busybox:latest，拉取策略是 IfNotPresent ，然后定义了 os 和 debug 两个环境变量，启动命令是 /bin/echo，参数里输出刚才定义的环境变量。
+
+把这份 YAML 文件和 Docker 命令对比一下，可以看出，用“声明式”把容器的运行状态描述得非常清晰准确，要比 docker run 那长长的命令行要整洁的多，对人、对机器都非常友好。
+
+### 如何使用kubectl操作Pod
+
+YAML文件
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busy-pod
+  labels:
+    owner: chrono
+    env: demo
+    region: north
+    tier: back
+spec:
+  containers:
+  - image: busybox:latest
+    name: busy
+    imagePullPolicy: IfNotPresent
+    env:
+      - name: os
+        value: "ubuntu"
+      - name: debug
+        value: "on"
+    command:
+      - /bin/echo
+    args:
+      - "$(os), $(debug)"    
+```
+
+
+
+指定YAML文件创建或者删除Pod
+
+```bash
+kubectl apply -f busy-pod.yml
+kubectl delete -f busy-pod.yml
+```
+
+![image-20230703135147223](Kubernetes.assets/image-20230703135147223.png)
+
+在YAML中定义了name字段，所以可以直接使用指定名字来删除。
+
+```bash
+kubectl delete pod busy-pod
+```
+
+Kubernetes 的 Pod 不会在前台运行，只能在后台（相当于docker中默认使用了参数 -d）。我们可以用命令 kubectl logs，它会把 Pod 的标准输出流信息展示。
+
+```bash
+kubectl logs busy-pod
+```
+
+![image-20230703135251997](Kubernetes.assets/image-20230703135251997.png)
+
+查看 Pod 列表和运行状态：
+
+```bash
+kubectl get pod
+```
+
+![image-20230703135419990](Kubernetes.assets/image-20230703135419990.png)
+
+![image-20230703135650612](Kubernetes.assets/image-20230703135650612.png)
+
+检查Pod的详细状态，它在调试排错时很有用：
+
+```bash
+kubectl describe pod busy-pod
+```
+
+![image-20230703135603478](Kubernetes.assets/image-20230703135603478.png)
+
+末尾的“**Events**”部分，它显示的是 **Pod 运行过程中的一些关键节点事件**。
+
+![image-20230703135633121](Kubernetes.assets/image-20230703135633121.png)
+
+对于这个 busy-pod，因为它只执行了一条 echo 命令就退出了，而 **Kubernetes 默认会重启 Pod**，所以就会进入一个反复停止 - 启动的循环错误状态。
+
+Kubernetes 里运行的应用大部分都是不会主动退出的服务。启动一个 Nginx 服务，这才是大多数 Pod 的工作方式。
+
+nginx日志：
+
+![image-20230703135820046](Kubernetes.assets/image-20230703135820046.png)
+
+kubectl 也提供与 docker 类似的 cp 和 exec 命令，kubectl cp 可以把本地文件拷贝进 Pod，kubectl exec 是进入 Pod 内部执行 Shell 命令，用法也差不多。比如我有一个“a.txt”文件，那么就可以使用 kubectl cp 拷贝进 Pod 的“/tmp”目录里：
+
+```bash
+echo 'aaa' > a.txt
+kubectl cp a.txt ngx-pod:/tmp
+```
+
+
+
+
+
+## Job/CronJob
+
+Pod 比容器更能够表示实际的应用，所以 Kubernetes 不会在容器层面来编排业务，而是把 Pod 作为在集群里调度运维的最小单位。
+
+### 为什么要有Job/CronJob
+
+Job 和 CronJob，它们就组合了 Pod，实现了对离线业务的处理。
+
+k8s中的业务分为两种：
+
+- 在线业务：运行起来基本上不会停，永远在线。
+  - 例如 Nginx、Node.js、MySQL、Redis 等等。
+- 离线业务：特点是必定会退出，不会无限制运行下去，所以需要考虑运行超时、状态检查、失败重试、获取计算结果等管理事项。
+  - 例如日志分析、数据建模、视频转码等等
+
+这些业务特性与容器管理没有必然的联系，如果只让一个Pod来实现业务就违反了单一职责，所以抽取出一个新的对象来去控制Pod的执行，完成业务。
+
+离线业务也可以再细分两种：
+
+- 临时任务：跑完就完事。
+- 定时任务：周期性运行。
+
+Kubernetes 里，**“临时任务”就是 API 对象 Job，“定时任务”就是 API 对象 CronJob**，使用这两个对象你就能够在 Kubernetes 里调度管理任意的离线业务了。
+
+### 如何使用YAML描述Job
+
+开头必备字段
+
+- apiVersion 不是 v1，而是 batch/v1。
+- kind 是 Job，这个和对象的名字是一致的。
+- metadata 里仍然要有 name 标记名字，也可以用 labels 添加任意的标签。
+
+job不能用kubectl run。kubectl run只能创建Pod，要创建 Pod 以外的其他 API 对象，需要使用命令 **kubectl create**，再加上对象的类型名。
+
+比如用 busybox 创建一个“echo-job”：
+
+```bash
+export out="--dry-run=client -o yaml"              # 定义Shell变量
+kubectl create job echo-job --image=busybox $out
+```
+
+或
+
+```bash
+kubectl create job echo-job --image=busybox --dry-run=client -o yaml
+```
+
+
+
+会生成一个基本的 YAML 文件，保存之后做点修改，就有了一个 Job 对象：
+
+```bash
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: echo-job
+
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - image: busybox
+        name: echo-job
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/echo"]
+        args: ["hello", "world"]
+```
+
+![image-20230712133330594](Kubernetes.assets/image-20230712133330594.png)
+
+在“spec”字段里，多了一个 template 字段，然后又是一个“spec”。
+
+它其实就是在 Job 对象里应用了组合模式，template 字段定义了一个“应用模板”，**里面嵌入了一个 Pod**，这样 Job 就可以从这个模板来创建出 Pod。
+
+这个 Pod 因为受 Job 的管理控制，不直接和 apiserver 打交道，也就没必要重复 apiVersion 等“头字段”，只需要定义好关键的 spec，描述清楚容器相关的信息就可以了，可以说是一个“无头”的 Pod 对象。
+
+![img](Kubernetes.assets/9b780905a824d2103d4ayyc79267ae28.jpg)
+
+在 containers 里写好名字和镜像，command 执行 /bin/echo，输出“hello world”。
+
+作为Job，在spec中多加了一个字段restartPolicy，指定Pod运行失败时的策略。OnFailure 是失败原地重启容器，而 Never 则是不重启容器，让 Job 去重新调度生成一个新的 Pod。
+
+### 如何在Kubernetes里操作Job
+
+创建对象，执行离线作业：
+
+```bash
+kubectl apply -f echo-job.yaml
+```
+
+![image-20230713130032472](Kubernetes.assets/image-20230713130032472.png)
+
+创建之后 Kubernetes 就会从 YAML 的模板定义中提取 Pod，**在 Job 的控制下运行 Pod**，你可以用 kubectl get job、kubectl get pod 来分别查看 Job 和 Pod 的状态：
+
+```bash
+kubectl get job
+kubectl get pod
+```
+
+![image-20230713130051113](Kubernetes.assets/image-20230713130051113.png)
+
+Pod 被 Job 管理，它就不会反复重启报错了，而是会显**示为 Completed 表示任务完成**，而 Job 里也会列出运行成功的作业数量，这里只有一个作业，所以就是 1/1。
+
+从图中能看到，Pod 被自动关联了一个名字：Job名字加上一个随机字符串。
+
+获取Pod的运行结果：
+
+```bash
+kubectl logs 
+```
+
+![image-20230713130814886](Kubernetes.assets/image-20230713130814886.png)
+
+Kubernetes 的这套 YAML 描述对象的框架提供了非常多的灵活性，可以在 Job 级别、Pod 级别添加任意的字段来定制业务，这种优势是简单的容器技术无法相比的。
+
+几个控制离线作业的重要字段，其他更详细的信息可以参考 Job 文档：
+
+- activeDeadlineSeconds，设置 Pod 运行的超时时间。
+- backoffLimit，设置 Pod 的失败重试次数。
+- completions，Job 完成需要运行多少个 Pod，默认是 1 个。
+- parallelism，它与 completions 相关，表示允许并发运行的 Pod 数量，避免过多占用资源。
+
+这4个字段在spec字段下，都是属于Job级别的，用来控制模板里的Pod对象。
+
+
+
+再创建一个模拟运行长时间的对象，sleep-job。设置15秒超时，最多重试2次，总共需要运行完4个Pod，同一时间最多并发两个Pod：
+
+```bash
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sleep-job
+
+spec:
+  activeDeadlineSeconds: 15
+  backoffLimit: 2
+  completions: 4
+  parallelism: 2
+
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - image: busybox
+        name: echo-job
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+          - sleep $(($RANDOM % 10 + 1)) && echo done
+```
+
+创建并运行Job：
+
+```bash
+kubectl apply -f sleep-job.yaml
+```
+
+![image-20230713131509483](Kubernetes.assets/image-20230713131509483.png)
+
+实时观察Pod状态：
+
+```bash
+kubectl get pod -w
+```
+
+![image-20230713131752428](Kubernetes.assets/image-20230713131752428.png)
+
+
+
+四个Pod都完成
+
+再次执行相同的对象时，显示资源未改变。说明声明式对象就是使用apply描述一个资源最终的状态。
+
+![image-20230713132059861](Kubernetes.assets/image-20230713132059861.png)
+
+再次执行这个Job需要换个字段或者得把当前这个删除资源。
+
+![image-20230713132325758](Kubernetes.assets/image-20230713132325758.png)
+
+再创建Job资源，看到 Pod 不断被排队、创建、运行的过程：
+
+![image-20230713132548507](Kubernetes.assets/image-20230713132548507.png)
+
+
+
+创建/更新资源 使用声明式对象配置 `kubectl apply -f XXX.yaml`
+
+删除资源 使用命令式对象配置 `kubectl delete -f XXX.yaml`
+
+查询资源 使用命令式对象管理` kubectl get(describe) 资源名称`
+
+### 如果使用YAML描述CronJob
+
+使用命令 kubectl create 来创建 CronJob 的样板。
+
+CronJob简写为cj，并且CronJob需要在命令行里指定参数--schedule。
+
+```bash
+export out="--dry-run=client -o yaml"              # 定义Shell变量
+kubectl create cj echo-cj --image=busybox --schedule="" $out
+```
+
+或
+
+```bash
+kubectl create cj echo-cj --image=busybox --schedule="" --dry-run=client -o yaml
+```
+
+![image-20230713132824559](Kubernetes.assets/image-20230713132824559.png)
+
+```bash
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  creationTimestamp: null
+  name: echo-cj
+spec:
+  jobTemplate:
+    metadata:
+      creationTimestamp: null
+      name: echo-cj
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containers:
+          - image: busybox
+            name: echo-cj
+            resources: {}
+          restartPolicy: OnFailure
+  schedule: ""
+status: {}
+```
+
+
+
+基于这个模板，编辑CronJob对象：
+
+```bash
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: echo-cj
+
+spec:
+  schedule: '*/1 * * * *'
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - image: busybox
+            name: echo-cj
+            imagePullPolicy: IfNotPresent
+            command: ["/bin/echo"]
+            args: ["hello", "world"]
+```
+
+里面有连续三个spec嵌套层次：
+
+- 第一个 spec 是 CronJob 自己的对象规格声明
+- 第二个 spec 从属于“jobTemplate”，它定义了一个 Job 对象。
+- 第三个 spec 从属于“template”，它定义了 Job 里运行的 Pod。
+
+CronJob 其实是又组合了 Job 而生成的新对象。
+
+![img](Kubernetes.assets/yy352c661ae37dd116dd12c61932b43c.jpg)
+
+除了定义 Job 对象的“jobTemplate”字段之外，CronJob 还有一个**新字段就是“schedule”**，用来定义任务周期运行的规则。用的是标准的Cron语法。
+
+用法和Job几乎一样。
+
+创建对象
+
+![image-20230713134005522](Kubernetes.assets/image-20230713134005522.png)
+
+查看CronJob状态和Pod状态
+
+![image-20230713134317900](Kubernetes.assets/image-20230713134317900.png)
+
+执行完三次了，每个Pod一个结果。
+
+
+
+![img](Kubernetes.assets/597caae147ec2a1852151878fc47ed7f.jpg)
+
+
+
+## ConfigMap/Secret
+
+
+
+
+
+
+
