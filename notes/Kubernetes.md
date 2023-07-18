@@ -1300,7 +1300,7 @@ kubectl create job echo-job --image=busybox --dry-run=client -o yaml
 
 会生成一个基本的 YAML 文件，保存之后做点修改，就有了一个 Job 对象：
 
-```bash
+```yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -1378,7 +1378,7 @@ Kubernetes 的这套 YAML 描述对象的框架提供了非常多的灵活性，
 
 再创建一个模拟运行长时间的对象，sleep-job。设置15秒超时，最多重试2次，总共需要运行完4个Pod，同一时间最多并发两个Pod：
 
-```bash
+```yaml
 
 apiVersion: batch/v1
 kind: Job
@@ -1463,7 +1463,7 @@ kubectl create cj echo-cj --image=busybox --schedule="" --dry-run=client -o yaml
 
 ![image-20230713132824559](Kubernetes.assets/image-20230713132824559.png)
 
-```bash
+```yaml
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -1492,7 +1492,7 @@ status: {}
 
 基于这个模板，编辑CronJob对象：
 
-```bash
+```yaml
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -1545,9 +1545,360 @@ CronJob 其实是又组合了 Job 而生成的新对象。
 
 ## ConfigMap/Secret
 
+业务运行一般需要配置，接下来看配置管理。
+
+在docker中可以用Dckerfile把配置文件打包到镜像里，或者是在运行时把文件拷贝进容器。但是这种方式不适合在集群中自动化运维管理。
+
+### ConfigMap/Secret
+
+Kubernetes通过ConfigMap和Secret两种对象类实现配置。
+
+应用程序的配置信息，从数据安全角度来看可以分为两类：
+
+- 明文配置。也就是不做保密，可以任意查询修改，比如服务端口、运行参数、文件路径等。
+- 机密配置。涉及敏感信息需要保密，比如密码、密钥、证书等。
+
+在存放和使用方面有些差异，所以K定义了两个API对象，ConfigMap 用来保存明文配置，Secret 用来保存秘密配置。
 
 
 
+### 什么是ConfigMap
+
+创建模板。ConfigMap简称cm。
+
+```bash
+export out="--dry-run=client -o yaml"        # 定义Shell变量
+kubectl create cm info $out
+```
+
+或
+
+```bash
+kubectl create cm info --dry-run=client -o yaml
+```
+
+![image-20230714131031605](Kubernetes.assets/image-20230714131031605.png)
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: info
+```
+
+ConfigMap 存储的是配置数据，是静态的字符串，并不是容器，所以它们就不需要用“spec”字段来说明运行时的“规格”。
+
+ConfigMap 要存储数据，我们就需要用另一个含义更明确的字段“data”。生成有data的模板，需要多加一个参数：
+
+```bash
+kubectl create cm info --from-literal=k=v --dry-run=client -o yaml
+```
+
+因为在 ConfigMap 里的数据都是 Key-Value 结构，所以 --from-literal 参数需要使用 k=v 的形式。
+
+得到模板
+
+![image-20230714131426172](Kubernetes.assets/image-20230714131426172.png)
+
+```yaml
+apiVersion: v1
+data:
+  k: v
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: info
+```
+
+修改一下
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: info
+data:
+  count: '10'
+  debug: 'on'
+  path: '/etc/systemd'
+  greeting: |
+    hello.
+```
+
+创建对象：
+
+```bash
+kubectl apply -f cm.yaml
+```
+
+![image-20230714131920089](Kubernetes.assets/image-20230714131920089.png)
+
+查看ConfigMap的状态：
+
+```bash
+kubectl get cm
+kubectl describe cm info
+```
 
 
+
+![image-20230714131950943](Kubernetes.assets/image-20230714131950943.png)
+
+![image-20230714132045471](Kubernetes.assets/image-20230714132045471.png)
+
+现在 ConfigMap 的 Key-Value 信息就已经存入了 etcd 数据库，后续就可以被其他 API 对象使用。
+
+
+
+### 什么是Secret
+
+它和 ConfigMap 的结构和用法很类似，不过在 Kubernetes 里 Secret 对象又细分出很多类，比如：
+
+- 访问私有镜像仓库的认证信息
+- 身份识别的凭证信息
+- HTTPS 通信的证书和私钥
+- 一般的机密信息（格式由用户自行解释）
+
+一般最多使用的是最后一种。
+
+创建Yaml模板，同时给出kv值的模板：
+
+```bash
+kubectl create secret generic user --from-literal=name=root --dry-run=client -o yaml
+```
+
+![image-20230714132328794](Kubernetes.assets/image-20230714132328794.png)
+
+```yaml
+apiVersion: v1
+data:
+  name: cm9vdA==
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: user
+```
+
+能看出来，name的值不是root。默认只是用了Base64编码做了处理。
+
+这里做一个Base64编码，然后写入YAML。加参数 -n 去掉字符串里隐含的换行符，否则 Base64 编码出来的字符串就是错误的。
+
+```bash
+echo -n "123456" | base64
+
+MTIzNDU2
+```
+
+
+
+编辑secret yaml文件：
+
+```yaml
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: user
+
+data:
+  name: cm9vdA==  # root
+  pwd: MTIzNDU2   # 123456
+  db: bXlzcWw=    # mysql
+```
+
+创建配置对象：
+
+```bash
+kubectl apply -f secret.yml
+kubectl get secret
+kubectl describe secret user
+```
+
+![image-20230718191054453](Kubernetes.assets/image-20230718191054453.png)
+
+使用 kubectl describe 不能直接看到内容，只能看到数据的大小。
+
+
+
+### 如何使用
+
+在Kubernetes里怎么去使用他们？
+
+ConfigMap 和 Secret 只是一些存储在 etcd 里的字符串，所以如果想要在运行时产生效果，就必须要以某种方式“注入”到 Pod 里，让应用去读取。在这方面的处理上 Kubernetes 和 Docker 是一样的，也是两种途径：**环境变量**和**加载文件**。
+
+
+
+#### 环境变量
+
+容器的字段“containers”里有一个“env”，它定义了 Pod 里容器能够看到的环境变量。
+
+当时我们只使用了简单的“value”，把环境变量的值写“死”在了 YAML 里，实际上它还可以使用另一个“valueFrom”字段，从 ConfigMap 或者 Secret 对象里获取值。
+
+看一下valueFrom的说明：
+
+```bash
+kubectl explain pod.spec.containers.env.valueFrom
+```
+
+![image-20230718193137999](Kubernetes.assets/image-20230718193137999.png)
+
+“valueFrom”字段指定了环境变量值的来源，可以是“configMapKeyRef”或者“secretKeyRef”，然后你要再进一步指定应用的 ConfigMap/Secret 的**“name”**和它里面的**“key”**，要当心的是这个“name”字段是 API 对象的名字，而不是 Key-Value 的名字。
+
+举一个例子：
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: env-pod
+
+spec:
+  containers:
+  - env:
+      - name: COUNT
+        valueFrom:
+          configMapKeyRef:
+            name: info
+            key: count
+      - name: GREETING
+        valueFrom:
+          configMapKeyRef:
+            name: info
+            key: greeting
+      - name: USERNAME
+        valueFrom:
+          secretKeyRef:
+            name: user
+            key: name
+      - name: PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: user
+            key: pwd
+
+    image: busybox
+    name: busy
+    imagePullPolicy: IfNotPresent
+    command: ["/bin/sleep", "300"]
+```
+
+这个 Pod 的名字是“env-pod”，镜像是“busybox”，执行命令 sleep 睡眠 300 秒。
+
+你需要重点关注的是它的“env”字段，里面定义了 4 个环境变量，COUNT、GREETING、USERNAME、PASSWORD。
+
+对于明文配置数据， COUNT、GREETING 引用的是 ConfigMap 对象，所以使用字段**“configMapKeyRef”，里面的“name”是 ConfigMap 对象的名字**，也就是之前我们创建的“info”，而“key”字段分别是“info”对象里的 count 和 greeting。
+
+同样的对于机密配置数据， USERNAME、PASSWORD 引用的是 **Secret 对象，要使用字段“secretKeyRef”，再用“name”指定 Secret 对象的名字** user，用“key”字段应用它里面的 name 和 pwd 。
+
+用图来表示：
+
+![img](Kubernetes.assets/0663d692b33c1dee5b08e486d271b69d.jpg)
+
+
+
+创建对象，然后进入Pod去验证变量
+
+```bash
+kubectl apply -f env-pod.yml
+kubectl exec -it env-pod -- sh
+
+echo $COUNT
+echo $GREETING
+echo $USERNAME $PASSWORD
+```
+
+![image-20230718194750249](Kubernetes.assets/image-20230718194750249.png)
+
+
+
+#### 加载文件的方式——Volume
+
+Kubernetes 为 Pod 定义了一个“Volume”的概念，可以翻译成是“存储卷”。可以为 Pod“挂载（mount）”多个 Volume，里面存放供 Pod 访问的数据。
+
+挂载Volume只需要在“spec”里增加一个“volumes”字段，然后再定义卷的名字和引用的 ConfigMap/Secret 就可以了。
+
+**Volume 属于 Pod**，不属于容器，所以它和字段“containers”是同级的，都属于“spec”。
+
+定义两个Volume，分别引用ConfigMap和Secret：
+
+```yaml
+spec:
+  volumes:
+  - name: cm-vol
+    configMap:
+      name: info
+  - name: sec-vol
+    secret:
+      secretName: user
+```
+
+用到“volumeMounts”字段，可以把定义好的 Volume 挂载到容器里的某个路径下，所以需要在里面用“mountPath”“name”明确地指定挂载路径和 Volume 的名字。
+
+```yaml
+  containers:
+  - volumeMounts:
+    - mountPath: /tmp/cm-items
+      name: cm-vol
+    - mountPath: /tmp/sec-items
+      name: sec-vol
+```
+
+把“volumes”和“volumeMounts”字段都写好之后，配置信息就可以加载成文件了。可以通过下图表示引用关系：
+
+![img](Kubernetes.assets/9d3258da1f40554ae88212db2b4yybyy.jpg)
+
+境变量是直接引用了 ConfigMap/Secret，而 Volume 又多加了一个环节，需要先用 Volume 引用 ConfigMap/Secret，然后在容器里挂载 Volume。
+
+这种方式的好处在于：**以 Volume 的概念统一抽象了所有的存储**，不仅现在支持 ConfigMap/Secret，以后还能够支持临时卷、持久卷、动态卷、快照卷等许多形式的存储，扩展性非常好。
+
+
+
+来一个实际的例子
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vol-pod
+
+spec:
+  volumes:
+  - name: cm-vol
+    configMap:
+      name: info
+  - name: sec-vol
+    secret:
+      secretName: user
+
+  containers:
+  - volumeMounts:
+    - mountPath: /tmp/cm-items
+      name: cm-vol
+    - mountPath: /tmp/sec-items
+      name: sec-vol
+
+    image: busybox
+    name: busy
+    imagePullPolicy: IfNotPresent
+    command: ["/bin/sleep", "300"]
+```
+
+
+
+创建应用，然后进入Pod验证：
+
+```bash
+kubectl apply -f vol-pod.yaml
+kubectl get pod
+ls
+```
+
+![image-20230718201209263](Kubernetes.assets/image-20230718201209263.png)
+
+ConfigMap 和 Secret 都变成了目录的形式，而它们里面的 Key-Value 变成了一个个的文件，而**文件名就是 Key**。
+
+因为这种形式上的差异，以 Volume 的方式来使用 ConfigMap/Secret，就和环境变量不太一样。**环境变量用法简单，更适合存放简短的字符串**，**而 Volume 更适合存放大数据量的配置文件**，在 Pod 里加载成文件后让应用直接读取使用。
+
+![img](Kubernetes.assets/0f4c7f7d64d6a08885353459ed99eb47.jpg)
 
