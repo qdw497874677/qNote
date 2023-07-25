@@ -1902,3 +1902,61 @@ ConfigMap 和 Secret 都变成了目录的形式，而它们里面的 Key-Value 
 
 ![img](Kubernetes.assets/0f4c7f7d64d6a08885353459ed99eb47.jpg)
 
+
+
+## 实战
+
+
+
+
+
+# 中级篇
+
+
+
+## 搭建多节点的K8s集群
+
+现在需要一个更真实的k8s环境，支持多节点。从这里改用 kubeadm（https://kubernetes.io/zh/docs/reference/setup-tools/kubeadm/）搭建出一个新的 Kubernetes 集群。
+
+### 什么是kubeadm
+
+Kubernetes 是很多模块构成的，而实现核心功能的组件像 apiserver、etcd、scheduler 等本质上都是可执行文件，所以也可以采用和其他系统差不多的方式，使用 Shell 脚本或者 Ansible 等工具打包发布到服务器上。
+
+不过 Kubernetes 里的这些组件的配置和相互关系实在是太复杂了，用 Shell、Ansible 来部署的难度很高。
+
+为了简化 Kubernetes 的部署工作，社区里就出现了一个专门用来在集群中安装 Kubernetes 的工具，名字就叫“kubeadm”，意思就是“Kubernetes 管理员”。
+
+kubeadm，原理和 minikube 类似，也是用容器和镜像来封装 Kubernetes 的各种组件，但它的目标不是单机部署，而是要能够轻松地在集群环境里部署 Kubernetes，并且让这个集群接近甚至达到生产级质量。
+
+而在保持这个高水准的同时，**kubeadm 还具有了和 minikube 一样的易用性**，只要很少的几条命令，如 init、join、upgrade、reset 就能够完成 Kubernetes 集群的管理维护工作，这让它不仅适用于集群管理员，也适用于开发、测试人员。
+
+
+
+### 实验环境的架构
+
+先看看集群的架构设计。图中有3台主机，用虚拟机虚拟出来的。
+
+![img](Kubernetes.assets/yyf5db64d398b4d5dyyd5e8e23ece53e.jpg)
+
+所谓的多节点集群，要求服务器应该有两台或者更多，为了简化我们只取最小值，所以这个 Kubernetes 集群就只有**两台主机**，一台是 Master 节点，另一台是 Worker 节点。当然，在完全掌握了 kubeadm 的用法之后，你可以在这个集群里添加更多的节点。
+
+**Master 节点**需要运行 apiserver、etcd、scheduler、controller-manager 等组件，管理整个集群，所以对配置要求比较高，**至少是 2 核 CPU、4GB 的内存。**
+
+**Worker 节点**没有管理工作，只运行业务应用，所以配置可以低一些，为了节省资源我给它**分配了 1 核 CPU 和 1GB 的内存**，可以说是低到不能再低了。
+
+为了模拟生产环境，在k8s集群之外还有一台辅助的服务器。名字叫**Console，在上面安装命令行工具 kubectl**。所有对 Kubernetes 集群的管理命令都是从这台主机发出去的。
+
+但其实Console只是一个逻辑概念，不一定要是独立，可以复用之前 minikube 的虚拟机，或者直接使用 Master/Worker 节点作为控制台。
+
+这三台主机组成我们的实验环境。所以在配置的时候要注意它们的网络选项，必须是在同一个网段，保证它们使用的是同一个“Host-Only”（VirtualBox）或者“自定”（VMWare Fusion）网络。
+
+
+
+### 准备工作
+
+
+
+
+
+
+
