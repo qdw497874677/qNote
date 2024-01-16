@@ -425,7 +425,7 @@ Spring定义了7中传播行为。主要就是当一个事务方法去调用另�
 
 
 
-## 用到的设计模式
+## Spring用到的设计模式
 
 - **工厂设计模式** : Spring使用工厂模式通过 `BeanFactory`、`ApplicationContext` 创建 bean 对象。
 - **代理设计模式** : Spring AOP 功能的实现。
@@ -437,7 +437,7 @@ Spring定义了7中传播行为。主要就是当一个事务方法去调用另�
 
 
 
-## Spring用到的设计模式
+
 
 ## 过滤器和拦截器
 
@@ -445,7 +445,7 @@ Spring定义了7中传播行为。主要就是当一个事务方法去调用另�
 
 过滤器（filter）依赖于servlet容器，是**基于函数回调**。能对http请求的整个流程进行拦截。关注web请求
 
-拦截器（interceptor）依赖于SpringMVC，是**基于反射机制**，是aop的一种应用。只能对 Controller 的 HTTP 请求进行拦截。关注方法调用
+拦截器（interceptor）依赖于SpringMVC，是**基于反射机制**，是基于aop的一种应用。只能对 Controller 的 HTTP 请求进行拦截。关注方法调用
 
 过滤器在外，拦截器在内。
 
@@ -522,7 +522,9 @@ DispatcherServlet类为SpringMVC的核心组件，所有经过SpringMVC的请求
 
 
 
-# @Scheduled
+# 功能使用
+
+## @Scheduled
 
 在Application启动类上添加@EnableScheduling注解开启定时
 
@@ -623,13 +625,11 @@ DispatcherServlet类为SpringMVC的核心组件，所有经过SpringMVC的请求
 
 
 
-
-
-# 使用拦截器
+## 拦截器
 
 springboot使用
 
-## 创建拦截器类
+### 创建拦截器类
 
 实现HandlerInterceptor
 
@@ -658,7 +658,7 @@ public class MyInterceptor implements HandlerInterceptor {
 
 
 
-## 注册拦截器
+### 注册拦截器
 
 通过配置类，配置MVC相关
 
@@ -676,13 +676,11 @@ public class WebConfigurer implements WebMvcConfigurer {
 
 
 
+## AOP
 
 
 
-
-# AOP
-
-## 五种通知
+### 五种通知
 
 配置 对方法切入
 
@@ -829,9 +827,7 @@ public class SpringbootAopApplicationTests {
 
 
 
-
-
-## Introduction
+### Introduction
 
 让一个service有另一个service的方法
 
@@ -894,4 +890,22 @@ public void testIntroduction() {
     doSthService.doSth();
 }
 ~~~
+
+
+
+
+
+## 缓存
+
+
+
+## 异步执行
+
+
+
+## 读配置
+
+
+
+
 
